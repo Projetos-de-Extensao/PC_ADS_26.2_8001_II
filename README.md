@@ -88,4 +88,3 @@ pip install -r requirements.txt
 mkdocs serve
 ```
 
-A documentação fica disponível em <http://127.0.0.1:8000>.

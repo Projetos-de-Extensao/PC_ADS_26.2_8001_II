@@ -1,13 +1,16 @@
 ---
-repo_url: https://github.com/jonh-carvalho/PBE_26.2_8001
+repo_url: https://github.com/Projetos-de-Extensao/PC_ADS_26.2_8001_II
+site_url: https://projetos-de-extensao.github.io/PC_ADS_26.2_8001_II/
 site_author: Jonh Carvalho
-site_name: PBE_26.2_8001
+site_name: PC_ADS_26.2_8001_II
 copyright: Copyright ©️ 2026, Jonh Carvalho
 
 nav: 
   - Home: index.md
   - Iniciação: 
       - Index: Iniciacao/index.md
+      - Documento de Visão: Iniciacao/documento_de_visao.md
+      - Metodologia: Iniciacao/metodologia.md
       - Pesquisa: Iniciacao/pesquisa.md
       - 5w2h: Iniciacao/5w2h.md
       - Design Thinking: Iniciacao/design_thinking.md
@@ -21,6 +24,7 @@ nav:
       - Casos de Uso: Elaboracao/casos_de_uso.md
       - Diagrama de Classes: Elaboracao/diagrama_de_classes.md
       - Diagrama de Sequência: Elaboracao/diagrama_de_sequencia.md
+      - Protótipo Alta Fidelidade: Elaboracao/prototipo_alta_fidelidade.md
   - Construção:
       - Index: Construcao/index.md
       - Github Workflows: Construcao/github_workflows.md
@@ -28,8 +32,14 @@ nav:
       - CodeSpace: Construcao/codespace.md
   - Transição:
       - Index: Transicao/index.md
-
-  - Bibliografia: Disciplina/Bibliografia.md
+  - Iterações:
+      - Iteração 1: Iteração/interacao1.md
+      - Iteração 2: Iteração/interacao2.md
+      - Iteração 3: Iteração/interacao3.md
+      - Iteração 4: Iteração/interacao4.md
+      - Iteração 5: Iteração/interacao5.md
+      - Iteração 6: Iteração/interacao6.md
+      - Iteração 7: Iteração/interacao7.md
 
 extra_css:
   - css/extra.css
@@ -99,7 +109,7 @@ plugins:
 theme:
   favicon: assets/ibmec_icon.png
   name: material
-  logo: assets/ibmec_logo.png
+  logo: assets/Ibmec_logo.png
   palette:
     
     - media: "(prefers-color-scheme)"

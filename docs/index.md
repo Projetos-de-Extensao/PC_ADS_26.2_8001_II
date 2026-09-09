@@ -1,117 +1,71 @@
 ---
 hide:
-    - navigation
     - toc
----  
+---
 
-# PBE_26.1_8001 { style="display:none" }
+# Lavoura Inteligente
+
+**Plataforma de Telemetria Agrícola** — Case 6: AgTech<br>
+Disciplina IBM8936 · Turma PC_ADS_26.2_8001_II
+
+Sensores IoT distribuídos por lavouras de grande extensão enviam, a cada minuto,
+leituras de umidade do solo, acidez, temperatura e clima. A plataforma recebe essa
+telemetria, avalia os limiares críticos de cada cultura e emite alertas de irrigação
+aos produtores, além de consolidar os dados para os painéis dos agrônomos de campo.
+
+O projeto reprojeta essa arquitetura sobre serviços gerenciados da AWS, substituindo o
+banco relacional — incapaz de sustentar a concorrência de escrita das séries temporais —
+por um modelo NoSQL de escrita distribuída, dentro de um orçamento de até
+**US$ 1.500,00/mês**.
+
 <div class="module-cards grid four-cols">
-
- <!-- Module I Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_I">
-        <div class="card-header">
-            PBE_26.1_8001_I
-        </div>
+    <div class="card module-card">
+        <div class="card-header">Iniciação</div>
         <div class="card-content">
-            <p class="contributors">Bruno, Christian, Gianluca, Micael, Marcos Paulo e Maurício</p>
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_I" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
+            <p class="contributors">Documento de visão, metodologia, pesquisa e protótipo de baixa fidelidade</p>
+            <a href="Iniciacao/" class="button primary-btn">Acessar</a>
         </div>
     </div>
-
-     <!-- Module II Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_II">
-        <div class="card-header">
-            PBE_26.1_8001_II
-        </div>
+    <div class="card module-card">
+        <div class="card-header">Elaboração</div>
         <div class="card-content">
-            <p class="contributors">Davi Ito, Gabriel Aguiar, Gabriel Lima, Jorge Alves e Rafael Barbosa</p>
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_II" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
+            <p class="contributors">Requisitos, casos de uso, diagramas e protótipo de alta fidelidade</p>
+            <a href="Elaboracao/" class="button primary-btn">Acessar</a>
         </div>
     </div>
-
-     <!-- Module III Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_III">
-        <div class="card-header">
-            PBE_26.1_8001_III
-        </div>
+    <div class="card module-card">
+        <div class="card-header">Construção</div>
         <div class="card-content">
-            <p class="contributors">Pedro Santos, Gabriel Melo, Bernardo Brandão, Iago Viana, Gabriel Maccachero</p>
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_III" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
+            <p class="contributors">Workflows, GitHub Projects e ambiente de desenvolvimento</p>
+            <a href="Construcao/" class="button primary-btn">Acessar</a>
         </div>
     </div>
-
-     <!-- Module IV Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_IV">
-        <div class="card-header">
-            PBE_26.1_8001_IV    
-        </div>
+    <div class="card module-card">
+        <div class="card-header">Transição</div>
         <div class="card-content">
-            <p class="contributors">Giovanna Perrone, Maria Eduarda, João Nicacio, Julia Valente e Luana Miranda</p>
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_IV" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
+            <p class="contributors">Entrega, implantação e encerramento do projeto</p>
+            <a href="Transicao/" class="button primary-btn">Acessar</a>
         </div>
     </div>
-
-     <!-- Module V Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_V">
-        <div class="card-header">
-            PBE_26.1_8001_V
-        </div>
-        <div class="card-content">
-            <p class="contributors">Daniel Studart, Davi Jacob, João Paulo Dopcke, Felipe Ultramar e Gustavo Rezende </p>
-            <br />
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_V" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
-        </div>
-    </div>
-
-     <!-- Module VI Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_VI">
-        <div class="card-header">
-            PBE_26.1_8001_VI
-        </div>
-        <div class="card-content">
-            <p class="contributors">Henrique Cals, Guilherme Pinon, Caio Cunha, Henrique Mundy, João Sampaio e Pedro Paulo</p>
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_VI" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
-        </div>
-    </div>
-
-     <!-- Module VII Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_VII">
-        <div class="card-header">
-            PBE_26.1_8001_VII
-        </div>
-        <div class="card-content">
-            <p class="contributors">Gabriel Barreto, Guilherme Braz, Ísis Tavares, Mariana Faria e Matheus Avarenga</p>
-            <br />
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_VII" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
-        </div>
-    </div>
-
-     <!-- Module VIII Card -->
-    <div class="card module-card" data-module-id="PBE_26.1_8001_VIII">
-        <div class="card-header">
-            PBE_26.1_8001_VIII
-        </div>
-        <div class="card-content">
-            <p class="contributors">Marco Antonio, Lucas Calil, Gabriel de Santi, Francisco Fagner e Pedro Carvalho</p>
-            <br />
-            <a href="https://github.com/Projetos-de-Extensao/PBE_26.1_8001_VIII" class="button primary-btn">
-                <span class="octicon-arrow-right-24:"></span> Ver Repositório
-            </a>
-        </div>
-    </div>
-
 </div>
+
+## Integrantes
+
+| Nome |
+| -- |
+| Joao Vitor Donda |
+| Caique Rechuan |
+| Joao Gabriel Meirelles |
+
+## Arquitetura na AWS
+
+| Serviço | Papel |
+| -- | -- |
+| Amazon API Gateway | Endpoint HTTPS de entrada da telemetria enviada pelos sensores |
+| AWS Lambda (ingestão) | Validação e sanitização dos payloads antes da gravação |
+| Amazon DynamoDB | Persistência da telemetria, particionada por sensor e ordenada por tempo |
+| DynamoDB Streams + Lambda | Avaliação dos limiares críticos e disparo dos alertas de irrigação |
+| Amazon SNS | Entrega dos alertas aos produtores |
+| Amazon S3 | Arquivos históricos e consolidados de safras passadas |
+| Amazon S3 + CloudFront | Frontend dos painéis, distribuído com HTTPS |
+| Amazon CloudWatch | Logs, métricas de ingestão e alarmes de falha das funções Lambda |

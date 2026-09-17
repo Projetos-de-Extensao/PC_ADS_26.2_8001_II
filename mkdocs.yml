@@ -1,24 +1,23 @@
 ---
 repo_url: https://github.com/Projetos-de-Extensao/PC_ADS_26.2_8001_II
 site_url: https://projetos-de-extensao.github.io/PC_ADS_26.2_8001_II/
-site_author: Jonh Carvalho
+site_author: Equipe Lavoura Inteligente
 site_name: PC_ADS_26.2_8001_II
-copyright: Copyright ©️ 2026, Jonh Carvalho
+copyright: Copyright © 2026, Equipe Lavoura Inteligente
 
-nav: 
+nav:
   - Home: index.md
-  - Iniciação: 
+  - Iniciação:
       - Index: Iniciacao/index.md
       - Documento de Visão: Iniciacao/documento_de_visao.md
-      - Pesquisa: Iniciacao/pesquisa.md
   - Elaboração:
       - Index: Elaboracao/index.md
-      - Requisitos: Elaboracao/levreq.md
+      - Requisitos Funcionais: Elaboracao/levreq.md
       - Requisitos Suplementares: Elaboracao/requisitos_suplementares.md
       - Casos de Uso: Elaboracao/casos_de_uso.md
   - Construção:
       - Index: Construcao/index.md
-      - Github Workflows: Construcao/github_workflows.md
+      - GitHub Workflows: Construcao/github_workflows.md
       - GitHub Projects: Construcao/github_projects.md
       - CodeSpace: Construcao/codespace.md
   - Transição:
@@ -28,53 +27,32 @@ extra_css:
   - css/extra.css
 
 markdown_extensions:
-  # Tooltips
   - abbr
-  # Admonitions
   - admonition
-  # Annotations, Buttons, Grids, Icons & Emojis, Images, Tooltips
   - attr_list
-  # Footnotes
   - footnotes
-  # Annotations, Grids, Images
   - md_in_html
-  # Images
   - pymdownx.blocks.caption
-  # Formatting
   - pymdownx.caret
-  # Formatting
   - pymdownx.critic
-  # Admonitions
   - pymdownx.details
-  # Icons & Emojis
   - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji ''
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg ''
-  # Code Blocks
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-  # Code Blocks
   - pymdownx.inlinehilite
-  # Formatting
   - pymdownx.keys
-  # Formatting
   - pymdownx.mark
-  # Code Blocks, Tooltips
   - pymdownx.snippets
-  # Admonitions, Annotations, Code Blocks, Content Tabs
   - pymdownx.superfences
-  # Content Tabs
   - pymdownx.tabbed:
       alternate_style: true
-  # Lists
   - pymdownx.tasklist:
       custom_checkbox: true
-  # Formatting
   - pymdownx.tilde
-  # Data Tables
-
   - toc:
       permalink: true
 
@@ -90,34 +68,29 @@ plugins:
       allow_errors: true
 
 theme:
-  favicon: assets/ibmec_icon.png
   name: material
+  language: pt-BR
+  favicon: assets/ibmec_icon.png
   logo: assets/Ibmec_logo.png
   palette:
-    
     - media: "(prefers-color-scheme)"
       toggle:
         icon: material/toggle-switch
-        name: Switch to light mode
+        name: Usar tema claro
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: indigo
       accent: black
       toggle:
         icon: material/toggle-switch-off
-        name: Switch to dark mode
+        name: Usar tema escuro
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: deep orange
       accent: amber
       toggle:
         icon: material/toggle-switch-off
-        name: Switch to system preference
-      color_mode: dark
-      language: pt-BR
-      favicon: images/favicon.png
-      user_color_mode_toggle: true
-  
+        name: Usar tema do sistema
   features:
     - content.code.copy
     - navigation.indexes
@@ -137,5 +110,3 @@ theme:
     code: Roboto Mono
   icon:
     repo: fontawesome/brands/github
-    logo: simple/react
-    favicon: simple/react

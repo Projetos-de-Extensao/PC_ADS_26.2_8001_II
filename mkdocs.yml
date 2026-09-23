@@ -15,6 +15,7 @@ nav:
       - Requisitos Funcionais: Elaboracao/levreq.md
       - Requisitos Suplementares: Elaboracao/requisitos_suplementares.md
       - Casos de Uso: Elaboracao/casos_de_uso.md
+      - Modelo de Análise (Segurança): Elaboracao/modelo_analise_seguranca.md
   - Construção:
       - Index: Construcao/index.md
       - GitHub Workflows: Construcao/github_workflows.md

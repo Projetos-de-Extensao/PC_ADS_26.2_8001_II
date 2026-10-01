@@ -3,7 +3,7 @@ id: modelo_analise_seguranca
 title: Modelo de Análise (Segurança)
 ---
 
-# Modelo de Análise (Pacotes de Segurança) (v2.0)
+# Modelo de Análise (Pacotes de Segurança) (v2.1)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
@@ -15,7 +15,7 @@ title: Modelo de Análise (Segurança)
 ### 1.1. Propósito
 
 Este documento organiza, em pacotes coesos, os controles de segurança definidos no
-Documento de Requisitos Suplementares (RNF-SEG-01 a RNF-SEG-09) e no cenário
+Documento de Requisitos Suplementares (RNF-SEG-01 a RNF-SEG-10) e no cenário
 arquitetural **CA-ARQ-007 — Configurar segurança**. O objetivo é dar rastreabilidade
 entre requisito, pacote, serviço AWS e controle técnico.
 
@@ -27,6 +27,7 @@ O modelo cobre a proteção de:
   propriedade), tratados segundo a LGPD;
 - polígonos dos talhões e documentos de origem;
 - evidências que sustentam cada status (precisam ser íntegras por no mínimo 5 anos);
+- imagens das vistorias por drone, que podem mostrar pessoas, casas e veículos;
 - status operacional consultado na balança;
 - credenciais do banco PostGIS, das fontes ambientais e da integração com a balança;
 - trilha de auditoria de ações críticas.
@@ -53,7 +54,7 @@ Observabilidade geral, backup e recuperação pertencem ao cenário **CA-ARQ-008
 
 - Documento de Visão (v2.0) e Documento de Arquitetura (v1.0).
 - Documento de Requisitos Suplementares (v2.0), seção 6.
-- Casos de Uso (v2.0), cenários CA-ARQ-001 e CA-ARQ-007.
+- Casos de Uso (v2.1), cenários CA-ARQ-001, CA-ARQ-007 e CA-ARQ-010.
 - AWS Well-Architected Framework — Security Pillar.
 - Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
 
@@ -73,6 +74,7 @@ package "Identity & Access" as IAM_PKG #E8F0FE {
   [MFA]
   [IAM Roles por Lambda]
   [Credencial da balança]
+  [Link temporário de upload]
 }
 
 package "Network Security" as NET_PKG #FFF4E5 {
@@ -116,7 +118,7 @@ AUD_PKG ..> DATA_PKG
 
 | Pacote | Responsabilidade | Serviços AWS | Requisitos atendidos |
 | -- | -- | -- | -- |
-| Identity & Access | Autenticar usuários, autorizar por perfil e controlar permissões de serviços e da balança. | Cognito, IAM, API Gateway | RNF-SEG-03, RNF-SEG-04, RNF-SEG-09 |
+| Identity & Access | Autenticar usuários, autorizar por perfil e controlar permissões de serviços, da balança e do envio de imagens de drone. | Cognito, IAM, API Gateway, S3 presigned URL | RNF-SEG-03, RNF-SEG-04, RNF-SEG-09, RNF-SEG-10 |
 | Network Security | Isolar o banco e proteger a entrada HTTPS. | VPC, Security Groups, VPC Endpoints, CloudFront, WAF | RNF-SEG-01 |
 | Data Protection | Criptografar dados e garantir integridade das evidências. | KMS, RDS, DynamoDB, S3 Object Lock | RNF-SEG-02, RNF-SEG-08 |
 | Secrets Management | Manter credenciais fora do código. | Secrets Manager | RNF-SEG-05 |
@@ -135,6 +137,7 @@ AUD_PKG ..> DATA_PKG
 | RNF-SEG-07 (LGPD) | Audit & Compliance | Inventário de dados | Finalidade, base legal, retenção |
 | RNF-SEG-08 (integridade de evidências) | Data Protection | S3 Object Lock, SHA-256 | Evidência imutável e verificável |
 | RNF-SEG-09 (balança autenticada) | Identity & Access | API Gateway | Credencial por cooperativa e limite de uso |
+| RNF-SEG-10 (imagens de drone restritas) | Identity & Access / Data Protection | S3 presigned URL, KMS | Link de 1 h só para a vistoria atribuída; leitura só Analista e Auditor |
 
 ## 3. Especificação dos pacotes
 
@@ -143,8 +146,8 @@ AUD_PKG ..> DATA_PKG
 #### 3.1.1. Responsabilidade
 
 Gerenciar identidades humanas (Administrador, Produtor/Cooperativa, Analista, Operador
-da balança, Gestor, Auditor), identidades de serviço (Lambdas) e a credencial da
-integração com a balança.
+da balança, Piloto de drone, Gestor, Auditor), identidades de serviço (Lambdas), a
+credencial da integração com a balança e os links temporários de envio de imagens.
 
 #### 3.1.2. Elementos do pacote
 
@@ -156,6 +159,7 @@ integração com a balança.
 | Authorizer | Valida o token em cada chamada da API. | API Gateway + Cognito |
 | IAM Roles | Uma role por função Lambda. | IAM |
 | Credencial da balança | Chave por cooperativa com plano de uso (limite de requisições). | API Gateway Usage Plans |
+| Link temporário de upload | URL assinada que só permite gravar na pasta da vistoria atribuída, válida por até 1 h. | S3 presigned URL |
 
 #### 3.1.3. Diagrama de classes de análise
 
@@ -167,7 +171,7 @@ class Usuario {
   -id: String
   -nome: String
   -email: String
-  -perfil: Admin/Produtor/Analista/Operador/Gestor/Auditor
+  -perfil: Admin/Produtor/Analista/Operador/Piloto/Gestor/Auditor
   -escopo: List<CooperativaId>
   -mfaHabilitado: Boolean
   +autenticar(): Token
@@ -199,7 +203,16 @@ class CredencialBalanca {
   +rotacionar(): void
 }
 
+class LinkUpload {
+  -vistoriaId: String
+  -pilotoId: String
+  -prefixoS3: String
+  -expiraEm: DateTime
+  +gerar(): URL
+}
+
 Usuario "*" -- "1" Grupo : pertence
+Usuario "1" -- "*" LinkUpload : solicita
 IAMRole "1" -- "*" IAMPolicy : possui
 @enduml
 ```
@@ -212,12 +225,14 @@ IAMRole "1" -- "*" IAMPolicy : possui
 | Produtor/Cooperativa | Humano | Cadastro e polígonos do seu escopo | Manter dados de origem. |
 | Analista de conformidade | Humano (MFA) | Evidências e revisão de status | UC-FUN-007. |
 | Operador da balança | Humano | Registro de lote e consulta de status | UC-FUN-006. |
+| Piloto de drone | Humano (MFA) | Vistorias atribuídas a ele e envio de imagens; não vê status nem dados pessoais | UC-FUN-012. |
 | Gestor | Humano | Dashboard e histórico (leitura) | UC-FUN-009. |
 | Auditor | Humano (MFA) | Trilhas e pacotes (somente leitura) | UC-FUN-010. |
 | Lambda-Ingestao-Role | Serviço | S3 (PutObject), RDS via Secrets, EventBridge (PutEvents) | UC-FUN-003/004. |
 | Lambda-Analise-Role | Serviço | RDS via Secrets, DynamoDB (PutItem), S3 evidências, EventBridge | UC-FUN-005. |
 | Lambda-Status-Role | Serviço | DynamoDB (GetItem/Query), registro de lote | UC-FUN-006. |
 | Lambda-Notificacao-Role | Serviço | SNS (Publish) | UC-FUN-008. |
+| Lambda-Vistoria-Role | Serviço | S3 (GetObject na pasta de vistorias), RDS via Secrets, DynamoDB (UpdateItem), SNS | UC-FUN-012. |
 
 #### 3.1.5. Política IAM de exemplo (Lambda-Status-Role)
 
@@ -257,6 +272,7 @@ acessar o banco geoespacial.
 | Operador alterar status indevidamente | Perfil de operador sem permissão de escrita no status. |
 | Credencial da balança vazada | Chave por cooperativa, revogável, com limite de requisições. |
 | Permissões amplas em Lambdas | Role específica por função (RNF-SEG-04). |
+| Link de upload vazado | Expira em até 1 h e só grava na pasta da vistoria atribuída. |
 | Conta administrativa comprometida | MFA obrigatório e alarme de login suspeito. |
 
 ### 3.2. Pacote: Network Security
@@ -393,6 +409,7 @@ Evidencia "*" -- "1" KMSKey : protegida por
 | DynamoDB | AES-256 | TLS 1.2+ | CMK | Status e eventos. |
 | S3 data lake | SSE-KMS | TLS 1.2+ | CMK | Arquivos brutos e histórico. |
 | S3 evidências | SSE-KMS + Object Lock | TLS 1.2+ | CMK | Integridade por 5 anos. |
+| S3 imagens de drone | SSE-KMS; Object Lock após a decisão | TLS 1.2+ | CMK | Imagens viram evidência e podem conter dados pessoais. |
 | Secrets Manager | AES-256 | TLS 1.2+ | AWS Managed | Credenciais. |
 
 #### 3.3.5. Riscos e mitigações
@@ -517,7 +534,9 @@ PacoteAuditavel "1" -- "*" EventoAuditoria : inclui
 | -- | -- | -- |
 | Login | Todos os perfis | Usuário, data/hora, resultado. |
 | Envio ou alteração de polígono | Produtor/Cooperativa | Versão anterior e nova, hash do arquivo. |
-| Revisão de status | Analista | Status anterior, novo status, justificativa. |
+| Revisão de status | Analista | Status anterior, novo status, justificativa, vistoria usada. |
+| Solicitação de vistoria | Analista | Talhão, motivo, prazo. |
+| Envio de imagens de drone | Piloto | Vistoria, arquivos, hash, resultado da validação. |
 | Decisão na balança | Operador | Lote, status consultado, decisão. |
 | Alteração de permissão | Administrador | Usuário afetado, perfil anterior e novo. |
 | Geração de pacote auditável | Auditor | Alvo, data, resultado da verificação de hashes. |
@@ -530,6 +549,7 @@ PacoteAuditavel "1" -- "*" EventoAuditoria : inclui
 | Contato (e-mail/telefone) | Produtor, usuários | Notificações | Enquanto o cadastro estiver ativo |
 | Localização da propriedade (polígono) | Produtor | Análise de risco | Mínimo 5 anos |
 | Logs de acesso | Usuários | Segurança e auditoria | Definida na política de retenção |
+| Imagens aéreas do drone | Produtor e terceiros que apareçam (pessoas, casas, veículos) | Verificar o uso do solo no talhão | Mínimo 5 anos quando usadas como evidência; acesso só Analista e Auditor |
 
 #### 3.5.6. Riscos e mitigações
 
@@ -563,13 +583,15 @@ PacoteAuditavel "1" -- "*" EventoAuditoria : inclui
 | RNF-SEG-07 | UC-FUN-002, CA-ARQ-007 | Audit & Compliance | Inventário de dados | Base legal, minimização, retenção |
 | RNF-SEG-08 | UC-FUN-005, UC-FUN-010 | Data Protection | S3 Object Lock | Hash SHA-256 e imutabilidade |
 | RNF-SEG-09 | UC-FUN-006 | Identity & Access | API Gateway Usage Plans | Credencial por cooperativa |
+| RNF-SEG-10 | UC-FUN-012, CA-ARQ-010 | Identity & Access / Data Protection | S3 presigned URL, KMS | Link temporário e leitura restrita |
 
 ## 6. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
 | 1.0 | 22/09/2026 | Substituída | Pacotes de segurança para telemetria IoT. | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
-| 2.0 | 01/10/2026 | Em revisão | Pacotes de segurança para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.0 | 01/10/2026 | Substituída | Pacotes de segurança para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.1 | 01/10/2026 | Em revisão | Controles para vistoria por drone (upload, acesso e LGPD). | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

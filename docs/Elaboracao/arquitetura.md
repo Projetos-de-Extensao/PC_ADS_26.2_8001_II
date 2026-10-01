@@ -3,7 +3,7 @@ id: arquitetura
 title: Documento de Arquitetura
 ---
 
-# Documento de Arquitetura (v1.0)
+# Documento de Arquitetura (v1.1)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
@@ -21,6 +21,10 @@ DynamoDB, S3, Lambda e API Gateway continuam sendo o núcleo pedido pelo Case 6.
 EventBridge, SNS, Athena e PostGIS complementam a arquitetura para torná-la realista e
 defensável.
 
+O monitoramento tem duas camadas: o **satélite** vigia todos os talhões o tempo todo; o
+**drone** é acionado só quando o satélite deixa dúvida, para vistoriar aquele talhão de
+perto.
+
 ## 2. Diagrama de alto nível
 
 ```plantuml
@@ -31,6 +35,7 @@ skinparam roundCorner 10
 
 actor "Produtor /\nCooperativa" as User
 actor "Operador da\nbalança" as Balanca
+actor "Piloto de\ndrone" as Piloto
 cloud "Fontes ambientais\nMapBiomas • DETER • Sentinel" as Fontes
 
 package "Frontend" {
@@ -47,6 +52,7 @@ package "Processamento (Lambda)" {
   [Análise espacial] as LGeo
   [Motor de decisão] as LDec
   [Consulta de status] as LStatus
+  [Processamento\nda vistoria] as LDrone
 }
 
 package "Armazenamento" {
@@ -61,6 +67,13 @@ package "Armazenamento" {
 User --> Front
 Front --> APIGW
 Balanca --> APIGW
+Piloto --> APIGW : pede link de envio
+Piloto --> S3 : envia imagens\n(link temporário)
+S3 --> EB : upload concluído
+EB --> LDrone
+LDrone --> PG : área coberta
+LDrone --> DDB : vistoria recebida
+LDrone --> SNS : avisa analista
 Fontes --> EB
 APIGW --> LIngest
 APIGW --> LStatus
@@ -87,7 +100,7 @@ APIGW ..> Athena : consulta histórica
 | Amazon API Gateway | Porta de entrada das APIs. | Recebe chamadas do frontend, da balança e de integrações; aplica autenticação, limites de requisição e métricas. | `GET /talhoes/{id}/status`, `POST /romaneios`, `POST /talhoes` |
 | AWS Lambda | Computação serverless. | Executa ingestão, validação e regras sem servidor ligado 24 horas. | Validar um GeoJSON, atualizar o status de um talhão. |
 | Amazon DynamoDB | Banco operacional de baixa latência. | Guarda o que precisa ser lido rápido: status atual e eventos recentes por talhão. | Consultar o status no momento da recepção do lote. |
-| Amazon S3 | Data lake e armazenamento de objetos. | Guarda arquivos grandes e históricos a baixo custo: GeoJSON, KML, Parquet, relatórios, evidências. | Manter anos de evidências sem custo de banco operacional. |
+| Amazon S3 | Data lake e armazenamento de objetos. | Guarda arquivos grandes e históricos a baixo custo: GeoJSON, KML, Parquet, relatórios, evidências e imagens de drone. | Manter anos de evidências sem custo de banco operacional; receber ortomosaicos de vários GB. |
 | Amazon Athena | SQL sobre o S3. | Análises sob demanda sem cluster analítico permanente. | Alertas históricos por município, período ou produtor. |
 | Amazon EventBridge | Barramento de eventos e agendador. | Desacopla ingestão, análise e notificação; agenda coletas periódicas. | Novo alerta ambiental dispara análise, atualização e notificação. |
 | Amazon SNS | Notificações. | Distribui alertas para e-mail, SMS ou webhooks. | Avisar quando um talhão muda de APROVADO para REVISÃO. |
@@ -104,7 +117,7 @@ Não colocamos todos os dados no mesmo banco. Cada camada guarda apenas o que pr
 | -- | -- | -- |
 | Hot data | DynamoDB | Status atual, eventos recentes, chaves de consulta rápida, dados usados na balança. |
 | Geoespacial | PostgreSQL/PostGIS | Polígonos, relacionamento produtor/fazenda/talhão e consultas espaciais. |
-| Cold data | S3 + Athena | Histórico, arquivos brutos, evidências antigas, Parquet e dados de auditoria. |
+| Cold data | S3 + Athena | Histórico, arquivos brutos, evidências antigas, Parquet, imagens de drone e dados de auditoria. |
 
 ## 5. Modelagem do DynamoDB
 
@@ -116,6 +129,7 @@ PK = TALHAO#10023    SK = STATUS
 PK = TALHAO#10023    SK = EVT#2026-09-20#MAPBIOMAS
 PK = TALHAO#10023    SK = EVT#2026-09-21#DETER
 PK = TALHAO#10023    SK = EVT#2026-09-22#SENTINEL
+PK = TALHAO#10023    SK = VISTORIA#2026-10-05
 PK = LOTE#2026-09-00128   SK = META
 ```
 
@@ -154,28 +168,69 @@ WHERE t.talhao_id = :talhao_id
 Para testes pequenos, Shapely/GeoPandas em Lambda são suficientes. Para a plataforma,
 PostGIS oferece índices espaciais (GiST) e consultas persistentes mais eficientes.
 
-## 7. Regra de status
+## 7. Vistoria por drone
+
+O satélite enxerga de longe (pixel de cerca de 10 m) e não vê através de nuvens. Quando
+isso deixa um talhão em REVISÃO, o drone vai até lá e traz imagens de alta resolução
+(poucos centímetros por pixel) daquele talhão específico.
+
+### 7.1. Fluxo
+
+```text
+Talhão em REVISÃO
+   ↓  analista pede vistoria
+Vistoria SOLICITADA  →  SNS avisa a equipe de campo
+   ↓  piloto voa e gera o ortomosaico no software do drone
+Piloto pede link de envio  →  API Gateway + Lambda devolvem link temporário do S3
+   ↓  envio direto para o S3, em partes (retoma se a internet cair)
+Upload concluído  →  EventBridge  →  Lambda de processamento
+   ↓  confere georreferência, data e se a imagem cobre o talhão
+Vistoria RECEBIDA  →  imagem aparece no mapa, sobre o polígono
+   ↓  analista compara e decide
+Status APROVADO ou BLOQUEADO (com a vistoria como evidência)
+```
+
+### 7.2. Decisões técnicas
+
+| Decisão | Motivo |
+| -- | -- |
+| Envio direto ao S3 por link temporário (*presigned URL*) com *multipart upload* | Arquivos de vários GB não passam pelo API Gateway (limite de 10 MB); o envio em partes retoma de onde parou. |
+| Ortomosaico em formato **COG** (*Cloud Optimized GeoTIFF*) | A Lambda lê só o cabeçalho e a área coberta, sem baixar o arquivo inteiro; o mapa exibe a imagem aos pedaços. |
+| Lambda para validar; geração do ortomosaico fora da plataforma | O processamento pesado de fotogrametria fica no software do drone; a AWS só recebe, valida, guarda e exibe. |
+| Área coberta do voo salva no PostGIS | Permite calcular quanto do talhão foi vistoriado e propor um contorno corrigido. |
+| Imagens no S3 com lifecycle | Depois da decisão, as imagens vão para uma classe mais barata, mas continuam guardadas como evidência. |
+
+### 7.3. Mapeamento do contorno
+
+O voo também mostra o limite real da área plantada. A Lambda compara a área coberta pelo
+voo com o polígono cadastrado; se a diferença passar do limite configurado, o sistema
+sugere um novo contorno, que só vira nova versão do polígono depois que o produtor
+confirmar.
+
+## 8. Regra de status
 
 | Situação | Status |
 | -- | -- |
 | Polígono válido, nenhuma interseção com alerta posterior à data de corte | APROVADO |
 | Polígono ausente/inválido, alerta próximo (buffer) sem interseção, dado vencido ou fonte indisponível | REVISÃO |
 | Interseção com alerta de desmatamento posterior a 31/12/2020 | BLOQUEADO |
+| REVISÃO resolvida pelo analista com vistoria por drone | APROVADO ou BLOQUEADO, conforme as imagens |
 
 Um lote com vários talhões assume o **pior** status entre eles. A revisão humana pode
 alterar o status com justificativa, sem apagar a evidência original.
 
-## 8. Fluxos principais
+## 9. Fluxos principais
 
 | Fluxo | Caminho |
 | -- | -- |
 | Cadastro de talhão | Frontend → API Gateway → Lambda → validação da geometria → PostGIS + S3 → DynamoDB (status inicial). |
 | Novo dado ambiental | EventBridge (agendado) → Lambda de ingestão → S3/PostGIS → evento → análise espacial → DynamoDB → SNS se houver mudança crítica. |
 | Chegada de um lote | Balança/Frontend → API Gateway → Lambda → leitura do STATUS no DynamoDB → APROVADO/REVISÃO/BLOQUEADO. |
+| Vistoria por drone | Analista → API (solicita) → SNS avisa o piloto → upload direto no S3 → EventBridge → Lambda valida → PostGIS + DynamoDB → analista decide. |
 | Consulta histórica | Dashboard → API → Athena sobre S3 e/ou PostGIS → relatório ou visualização. |
 | Auditoria | Seleção de produtor/lote → polígonos versionados, eventos e evidências → pacote auditável no S3. |
 
-## 9. Por que cloud e serverless
+## 10. Por que cloud e serverless
 
 - **Elasticidade**: pouco tráfego fora da safra e picos na colheita.
 - **Serverless**: Lambdas só executam quando há evento; sem CPU ociosa.
@@ -185,7 +240,7 @@ alterar o status com justificativa, sem apagar a evidência original.
 - **Histórico barato**: dados antigos saem do banco operacional e vão para S3 + Athena.
 - **Serviços gerenciados**: menos esforço com servidores, patches e capacidade.
 
-## 10. Estratégia de custo (US$ 1.500/mês)
+## 11. Estratégia de custo (US$ 1.500/mês)
 
 - DynamoDB apenas para dados operacionais (modo sob demanda).
 - Histórico em S3 no formato Parquet, particionado por data e região.
@@ -193,11 +248,14 @@ alterar o status com justificativa, sem apagar a evidência original.
 - Lambdas por evento em vez de servidores dedicados.
 - PostGIS com instância pequena, guardando só o que precisa de consulta espacial.
 - Lifecycle policies no S3 para mover dados antigos a classes mais baratas.
+- Drone só onde há dúvida: cerca de 300 vistorias por safra, em vez de sobrevoar todos
+  os 25.000 talhões. Imagens de drone vão para S3 Glacier Instant Retrieval 90 dias
+  após a decisão.
 - VPC Endpoints em vez de NAT Gateway para acesso privado a S3 e DynamoDB.
 
 O valor final deve ser validado na AWS Pricing Calculator com o cenário de referência.
 
-## 11. Riscos e pontos de atenção
+## 12. Riscos e pontos de atenção
 
 | Risco | Impacto | Mitigação |
 | -- | -- | -- |
@@ -207,8 +265,12 @@ O valor final deve ser validado na AWS Pricing Calculator com o cenário de refe
 | Dependência de fontes externas | Dados atrasam ou mudam | Versionar datasets; registrar data e origem de cada evidência. |
 | Consulta histórica cara | Athena cobra por dados varridos | Particionar e usar Parquet comprimido. |
 | Regra simplificada | Status lido como certeza jurídica | Chamar de status de risco e manter revisão humana com evidências. |
+| Envio de imagem enorme falha no campo | Vistoria atrasa | Upload em partes com retomada; link temporário renovável. |
+| Imagem sem georreferência ou de outra área | Evidência inválida | Lambda valida coordenadas, data e cobertura antes de aceitar. |
+| Custo de guardar imagens de drone | Fatura do S3 cresce | Drone só em talhões em REVISÃO; lifecycle para classe mais barata. |
+| Imagens aéreas mostram pessoas e casas | Risco de privacidade (LGPD) | Acesso restrito ao analista e ao auditor; links temporários. |
 
-## 12. MVP
+## 13. MVP
 
 - Cadastro de produtor, fazenda e talhão.
 - Upload de GeoJSON do talhão.
@@ -219,12 +281,14 @@ O valor final deve ser validado na AWS Pricing Calculator com o cenário de refe
 - Dashboard simples com mapa e lista de talhões.
 - Endpoint de consulta na balança.
 - Notificação via SNS quando o status muda.
+- Upload de um ortomosaico de exemplo (GeoTIFF) e exibição sobre o talhão no mapa.
 
-## 13. Histórico e aprovação
+## 14. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
-| 1.0 | 01/10/2026 | Em revisão | Arquitetura para rastreabilidade agrícola e conformidade EUDR. | Equipe do projeto |
+| 1.0 | 01/10/2026 | Substituída | Arquitetura para rastreabilidade agrícola e conformidade EUDR. | Equipe do projeto |
+| 1.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

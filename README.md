@@ -21,8 +21,9 @@ atualizado para cada talhão.
 
 Quando um lote chega à cooperativa, a balança consulta o status já calculado e recebe,
 em poucos segundos, **APROVADO**, **REVISÃO** ou **BLOQUEADO**, com motivo e evidências
-versionadas. A regulamentação europeia contra desmatamento (EUDR) é usada como motivação
-de negócio, não como aconselhamento jurídico.
+versionadas. Quando o satélite deixa dúvida, um drone vistoria o talhão de perto e as
+imagens viram evidência para a decisão do analista. A regulamentação europeia contra
+desmatamento (EUDR) é usada como motivação de negócio, não como aconselhamento jurídico.
 
 O projeto é acadêmico e demonstra o uso integrado de serviços AWS com um limite de
 **US$ 1.500 por mês**.
@@ -43,7 +44,7 @@ O projeto é acadêmico e demonstra o uso integrado de serviços AWS com um limi
 | Receber APIs | API Gateway | Entrada segura e gerenciada. |
 | Executar lógica | Lambda | Serverless e orientado a eventos. |
 | Status rápido | DynamoDB | Baixa latência na consulta da balança. |
-| Arquivos e histórico | S3 | Data lake barato e escalável. |
+| Arquivos e histórico | S3 | Data lake barato e escalável; recebe as imagens dos drones. |
 | SQL histórico | Athena | Consulta direta no S3. |
 | Eventos | EventBridge | Desacoplamento e agendamento. |
 | Alertas | SNS | Notificações de mudança de status. |

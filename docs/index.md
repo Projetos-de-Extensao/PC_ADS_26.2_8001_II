@@ -14,6 +14,9 @@ um lote chega à cooperativa, a balança consulta um status já calculado e rece
 poucos segundos, uma resposta: **APROVADO**, **REVISÃO** ou **BLOQUEADO** — sempre com
 motivo e evidências.
 
+O satélite vigia todos os talhões todos os dias. Quando ele deixa dúvida, um **drone**
+vai até o talhão, tira imagens de alta resolução e o analista decide com base nelas.
+
 > Pergunta central: *"Este lote tem origem rastreável e evidências suficientes para ser
 > aceito sem gerar risco de conformidade?"*
 
@@ -66,10 +69,10 @@ de até **US$ 1.500,00/mês**.
 | -- | -- |
 | Amazon API Gateway | Entrada das APIs do dashboard, da balança e das integrações |
 | Amazon EventBridge | Agendamento das coletas e distribuição de eventos entre componentes |
-| AWS Lambda | Ingestão, validação de polígonos, análise espacial e consulta de status |
+| AWS Lambda | Ingestão, validação de polígonos e de imagens de drone, análise espacial e consulta de status |
 | Amazon DynamoDB | Status atual e eventos recentes por talhão (consulta rápida na balança) |
 | PostgreSQL + PostGIS (RDS) | Polígonos, relacionamentos e operações espaciais |
-| Amazon S3 | Data lake: arquivos brutos, histórico e evidências imutáveis |
+| Amazon S3 | Data lake: arquivos brutos, histórico, imagens de drone e evidências imutáveis |
 | Amazon Athena | Consultas SQL sobre o histórico no S3 |
 | Amazon SNS | Notificações de mudança de status |
 | Amazon Cognito | Login, MFA e perfis de acesso |

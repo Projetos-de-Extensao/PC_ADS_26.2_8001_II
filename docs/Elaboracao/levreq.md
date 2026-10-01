@@ -3,7 +3,7 @@ id: levantamento_requisitos
 title: Levantamento de Requisitos
 ---
 
-# Levantamento de Requisitos Funcionais (v2.0)
+# Levantamento de Requisitos Funcionais (v2.1)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Data**: 01/10/2026<br>
@@ -20,7 +20,8 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 | -- | -- |
 | Administrador | Usuários, perfis, integrações e parâmetros das regras de status. |
 | Produtor / Cooperativa | Cadastro de fazendas, talhões, polígonos e documentos de origem sob sua responsabilidade. |
-| Analista de conformidade | Consulta de talhões, evidências e revisão humana de status. |
+| Analista de conformidade | Consulta de talhões, evidências, revisão humana de status e solicitação de vistoria por drone. |
+| Piloto de drone | Lista de vistorias pendentes e envio das imagens dos voos. |
 | Operador da balança | Registro de lote e consulta de status no momento da recepção. |
 | Gestor | Painéis, consultas históricas e relatórios. |
 | Auditor | Consulta somente leitura de trilhas, evidências e pacotes auditáveis. |
@@ -71,7 +72,19 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 | RF-RSK-04 | Toda mudança de status deve ficar no histórico. | Must | Transições ficam como eventos e no data lake. |
 | RF-RSK-05 | O analista deve revisar e alterar status manualmente. | Must | Alteração exige justificativa, registra autor e preserva a evidência original. |
 
-### 3.6. Recepção de lotes (balança)
+### 3.6. Vistoria por drone
+
+| ID | Requisito | Prioridade | Critério de aceitação |
+| -- | -- | -- | -- |
+| RF-DRN-01 | O analista deve solicitar vistoria por drone para um talhão em REVISÃO. | Must | Solicitação registra talhão, motivo, prazo e solicitante; equipe de campo é notificada. |
+| RF-DRN-02 | O piloto deve ver as vistorias pendentes com o mapa do talhão. | Must | Lista mostra polígono, localização, prazo e situação (SOLICITADA, AGENDADA, RECEBIDA). |
+| RF-DRN-03 | O piloto deve enviar o ortomosaico (GeoTIFF) e as fotos do voo. | Must | Envio de até 5 GB com retomada; arquivo fica vinculado à vistoria. |
+| RF-DRN-04 | O sistema deve validar a imagem recebida. | Must | Imagem sem georreferência, sem data, fora da janela da vistoria ou cobrindo menos de 95% do talhão é recusada com motivo. |
+| RF-DRN-05 | O analista deve ver a imagem sobre o polígono do talhão. | Must | Mapa sobrepõe ortomosaico, polígono e alertas ambientais. |
+| RF-DRN-06 | A vistoria aceita deve virar evidência da decisão. | Must | Revisão que usa a vistoria registra o vínculo; imagem entra no pacote auditável. |
+| RF-DRN-07 | O sistema deve sugerir o contorno do talhão a partir do voo. | Should | Diferença acima do limite gera sugestão; nova versão do polígono só após confirmação do produtor. |
+
+### 3.7. Recepção de lotes (balança)
 
 | ID | Requisito | Prioridade | Critério de aceitação |
 | -- | -- | -- | -- |
@@ -80,7 +93,7 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 | RF-LOT-03 | Lote com vários talhões deve assumir o pior status. | Must | Um talhão BLOQUEADO torna o lote BLOQUEADO. |
 | RF-LOT-04 | A decisão tomada na balança deve ser registrada. | Must | Aceite/recusa fica vinculado ao status consultado e ao operador. |
 
-### 3.7. Alertas e notificações
+### 3.8. Alertas e notificações
 
 | ID | Requisito | Prioridade | Critério de aceitação |
 | -- | -- | -- | -- |
@@ -88,14 +101,14 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 | RF-ALT-02 | Melhora ou resolução também deve ser comunicada. | Should | Transição para APROVADO gera notificação de resolução. |
 | RF-ALT-03 | Notificações não podem ser duplicadas. | Must | Reprocessar o mesmo evento não gera segunda notificação. |
 
-### 3.8. Histórico, painel e auditoria
+### 3.9. Histórico, painel e auditoria
 
 | ID | Requisito | Prioridade | Critério de aceitação |
 | -- | -- | -- | -- |
 | RF-HIS-01 | O dashboard deve mostrar mapa e lista de talhões por status. | Must | Cores verde/amarelo/vermelho; filtro por produtor, município e status. |
 | RF-HIS-02 | O gestor deve consultar histórico por período, município ou produtor. | Should | Consulta usa Athena sobre dados particionados no S3. |
 | RF-AUD-01 | O auditor deve consultar eventos críticos. | Must | Filtros por ator, recurso, período e correlation ID, sem permitir alteração. |
-| RF-AUD-02 | O sistema deve gerar pacote auditável por produtor ou lote. | Must | Pacote contém polígonos versionados, datasets, análises, status e decisões. |
+| RF-AUD-02 | O sistema deve gerar pacote auditável por produtor ou lote. | Must | Pacote contém polígonos versionados, datasets, análises, vistorias por drone, status e decisões. |
 
 ## 4. Regras de negócio
 
@@ -110,6 +123,9 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 | RN-07 | Toda análise registra as versões do polígono e dos datasets usados. |
 | RN-08 | Um lote assume o pior status entre seus talhões. |
 | RN-09 | Exclusão de cadastro é lógica e preserva evidências durante a retenção. |
+| RN-10 | Vistoria por drone só é solicitada para talhões em REVISÃO; não substitui o monitoramento por satélite. |
+| RN-11 | Imagem sem georreferência, sem data ou que não cubra o talhão não vale como evidência. |
+| RN-12 | A vistoria vale para a decisão daquele momento; um novo alerta de satélite posterior reabre a análise. |
 
 ## 5. Dependências
 
@@ -117,13 +133,16 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 - Definição da faixa de proximidade (buffer) e da validade do status.
 - Política de retenção para evidências e dados pessoais.
 - Formato de integração com o sistema da balança.
+- Definição da equipe de drones (própria ou terceirizada), do modelo de câmera e do
+  formato de entrega do ortomosaico.
 
 ## 6. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
 | 1.0 | 17/09/2026 | Substituída | Requisitos de telemetria IoT. | Equipe do projeto |
-| 2.0 | 01/10/2026 | Em revisão | Requisitos para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.0 | 01/10/2026 | Substituída | Requisitos para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

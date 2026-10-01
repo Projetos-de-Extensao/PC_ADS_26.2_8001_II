@@ -3,7 +3,7 @@ id: requisitos_suplementares
 title: Requisitos Suplementares
 ---
 
-# Documento de Requisitos Suplementares (v2.0)
+# Documento de Requisitos Suplementares (v2.1)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
@@ -25,6 +25,7 @@ casos de uso pela matriz de rastreabilidade.
 | Polígono | Até 2.000 vértices; arquivo de até 10 MB |
 | Fontes ambientais | Alertas diários (ex.: DETER) e camadas mensais/anuais (ex.: MapBiomas) |
 | Consultas na balança | Até 5.000 por dia na colheita; pico de 20 por segundo |
+| Vistorias por drone | Até 300 por safra; até 5 GB de imagens por voo |
 | Crescimento | Até 2x o número de talhões sem mudança estrutural |
 | Região | Definida no Documento de Arquitetura antes dos testes |
 | Equipe | Três integrantes |
@@ -53,6 +54,9 @@ para continuar reproduzíveis.
 | RNF-PER-03 | A validação de polígono deve ser ágil. | Arquivo de até 10 MB validado em até 30 s. |
 | RNF-PER-04 | O dashboard deve abrir rapidamente. | Mapa e lista visíveis em até 3 s para um produtor com até 100 talhões. |
 | RNF-PER-05 | Consultas históricas devem ter custo controlado. | Consulta típica no Athena varre menos de 1 GB graças a partições e Parquet. |
+| RNF-PER-06 | O envio de imagens de drone deve funcionar com internet de campo. | Upload de até 5 GB em partes, retomando de onde parou após queda de conexão. |
+| RNF-PER-07 | A vistoria recebida deve ser validada rapidamente. | Validação de georreferência e cobertura em até 15 min após o fim do upload. |
+| RNF-PER-08 | O analista deve ver a imagem do drone sem baixar o arquivo inteiro. | Ortomosaico em COG exibido no mapa em até 5 s. |
 | RNF-CAP-01 | A solução deve absorver crescimento. | 2x talhões sem mudança estrutural e sem violar os SLOs. |
 | RNF-CAP-02 | O pico da colheita não pode degradar a balança. | 20 consultas/s sustentadas por 30 min sem throttling nem erro acima de 1%. |
 | RNF-CAP-03 | Consultas operacionais não podem usar Scan. | Evidência mostra Query por chave ou índice no DynamoDB. |
@@ -83,6 +87,7 @@ para continuar reproduzíveis.
 | RNF-SEG-07 | O tratamento deve observar a LGPD. | Inventário de dados pessoais, finalidade, base legal, minimização e retenção documentados. |
 | RNF-SEG-08 | Evidências devem ter integridade verificável. | Hash SHA-256 de cada arquivo e evidência, conferido na geração do pacote auditável. |
 | RNF-SEG-09 | A integração da balança deve ser autenticada. | Credencial própria por cooperativa, revogável e com limite de requisições. |
+| RNF-SEG-10 | Imagens de drone devem ter acesso restrito. | Upload só por link temporário (expira em até 1 h) e apenas para a vistoria atribuída; visualização só por Analista e Auditor; imagens tratadas no inventário LGPD. |
 
 ## 7. Operação e observabilidade
 
@@ -125,6 +130,7 @@ para continuar reproduzíveis.
 | RNF-CUS-03 | Dados frios não podem ficar na camada cara. | Histórico em S3/Parquet com lifecycle; DynamoDB apenas com dados operacionais. |
 | RNF-CUS-04 | A estimativa deve ser reproduzível. | Pricing Calculator registra região, volumes, retenção e data dos preços. |
 | RNF-CUS-05 | Evitar custos fixos desnecessários. | Sem cluster analítico permanente; VPC Endpoints em vez de NAT Gateway quando possível. |
+| RNF-CUS-06 | Imagens de drone não podem inflar o custo de armazenamento. | Drone só para talhões em REVISÃO; imagens vão para S3 Glacier Instant Retrieval 90 dias após a decisão. |
 
 ## 11. Responsabilidades
 
@@ -134,6 +140,7 @@ para continuar reproduzíveis.
 | Equipe Lavoura Inteligente | Código, configuração, IAM, dados, testes, custos, backup e resposta a incidentes. |
 | Cooperativa | Qualidade dos cadastros, decisão final na balança e revisão humana. |
 | Fontes ambientais | Publicação dos dados; a plataforma não garante sua exatidão. |
+| Equipe de drones | Voar dentro das regras da ANAC e do DECEA, gerar o ortomosaico e enviar no prazo. |
 
 ## 12. Decisões pendentes
 
@@ -144,6 +151,7 @@ para continuar reproduzíveis.
 | Buffer e validade | Definir faixa de proximidade e validade do status. |
 | Retenção | Confirmar retenção de evidências (mínimo 5 anos) e de dados pessoais. |
 | Integração da balança | Definir formato de chamada e credenciais. |
+| Operação de drones | Definir equipe (própria ou terceirizada), câmera, prazo de vistoria e formato do ortomosaico. |
 | Estimativa de custo | Validar no AWS Pricing Calculator. |
 
 ## 13. Histórico e aprovação
@@ -152,7 +160,8 @@ para continuar reproduzíveis.
 | -- | -- | -- | -- | -- |
 | 1.0 | 08/09/2026 | Substituída | Versão inicial (telemetria IoT). | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
 | 1.1 | 17/09/2026 | Substituída | SLOs, custo, durabilidade e LGPD (telemetria IoT). | Equipe do projeto |
-| 2.0 | 01/10/2026 | Em revisão | Requisitos para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.0 | 01/10/2026 | Substituída | Requisitos para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

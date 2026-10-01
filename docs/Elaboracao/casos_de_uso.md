@@ -3,7 +3,7 @@ id: casos_de_uso
 title: Casos de Uso
 ---
 
-# Casos de Uso (v2.0)
+# Casos de Uso (v2.1)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Data**: 01/10/2026<br>
@@ -21,7 +21,8 @@ procedimentos de implantação/operação, e não casos de uso do produto.
 | -- | -- |
 | Administrador | Gerenciar usuários, perfis e parâmetros das regras. |
 | Produtor / Cooperativa | Cadastrar fazendas, talhões, polígonos e documentos. |
-| Analista de conformidade | Investigar e revisar talhões em REVISÃO ou BLOQUEADO. |
+| Analista de conformidade | Investigar e revisar talhões em REVISÃO ou BLOQUEADO; solicitar vistoria por drone. |
+| Piloto de drone | Vistoriar talhões e enviar as imagens dos voos. |
 | Operador da balança | Registrar lote e consultar o status na recepção. |
 | Gestor | Consultar painéis e histórico. |
 | Auditor | Consultar trilhas e gerar pacotes auditáveis, sem alterá-los. |
@@ -45,6 +46,7 @@ actor Gestor as Gest
 actor Auditor as Audit
 actor "Fonte ambiental" as Fonte
 actor "Canal de notificacao" as Canal
+actor "Piloto de\ndrone" as Piloto
 
 rectangle "Lavoura Inteligente" {
   usecase "UC-FUN-001\nAutenticar e autorizar" as UC1
@@ -57,6 +59,8 @@ rectangle "Lavoura Inteligente" {
   usecase "UC-FUN-008\nNotificar mudanca de status" as UC8
   usecase "UC-FUN-009\nConsultar historico e mapa" as UC9
   usecase "UC-FUN-010\nGerar pacote auditavel" as UC10
+  usecase "UC-FUN-011\nSolicitar vistoria por drone" as UC11
+  usecase "UC-FUN-012\nEnviar imagens da vistoria" as UC12
 }
 
 Admin --> UC1
@@ -78,6 +82,11 @@ UC8 --> Canal
 UC4 ..> UC5 : dispara
 UC3 ..> UC5 : dispara
 UC5 ..> UC8 : dispara
+Analista --> UC11
+Piloto --> UC1
+Piloto --> UC12
+UC7 ..> UC11 : pode pedir
+UC12 ..> UC7 : evidencia
 @enduml
 ```
 
@@ -159,9 +168,9 @@ disparado por eventos (novo polígono ou novo dataset), sem ator humano.
 | Ator | Analista de conformidade. |
 | Precondição | Talhão em REVISÃO ou BLOQUEADO. |
 | Fluxo principal | 1. Abre o talhão e vê mapa, interseções e evidências.<br>2. Analisa documentos e histórico.<br>3. Decide manter ou alterar o status.<br>4. Informa justificativa.<br>5. Sistema grava a decisão sem apagar a evidência original. |
-| Alternativas | Falta informação: solicitar documento ao produtor e manter REVISÃO. |
+| Alternativas | Falta informação: solicitar documento ao produtor e manter REVISÃO.<br>Dúvida sobre o que existe no campo: solicitar vistoria por drone (UC-FUN-011) e manter REVISÃO até a imagem chegar.<br>Vistoria recebida: analisar a imagem sobre o polígono e decidir com ela como evidência. |
 | Pós-condição | Decisão humana registrada e auditável. |
-| Requisitos | RF-RSK-05, RN-06, RNF-SEG-06. |
+| Requisitos | RF-RSK-05, RF-DRN-05, RF-DRN-06, RN-06, RNF-SEG-06. |
 
 ### UC-FUN-008 — Notificar mudança de status
 
@@ -196,6 +205,28 @@ disparado por eventos (novo polígono ou novo dataset), sem ator humano.
 | Pós-condição | Pacote reproduzível e registro da geração. |
 | Requisitos | RF-AUD-01, RF-AUD-02, RNF-CON-05, RNF-SEG-06, RNF-SEG-08. |
 
+### UC-FUN-011 — Solicitar vistoria por drone
+
+| Elemento | Especificação |
+| -- | -- |
+| Ator | Analista de conformidade. |
+| Precondição | Talhão em REVISÃO. |
+| Fluxo principal | 1. Analista abre o talhão e escolhe "solicitar vistoria".<br>2. Informa motivo e prazo.<br>3. Sistema registra a vistoria como SOLICITADA.<br>4. SNS avisa a equipe de campo. |
+| Alternativas | Talhão fora de REVISÃO: recusar (RN-10).<br>Já existe vistoria aberta: mostrar a existente em vez de criar outra. |
+| Pós-condição | Vistoria pendente visível para o piloto. |
+| Requisitos | RF-DRN-01, RF-DRN-02, RN-10. |
+
+### UC-FUN-012 — Enviar imagens da vistoria
+
+| Elemento | Especificação |
+| -- | -- |
+| Ator | Piloto de drone. |
+| Precondição | Piloto autenticado; vistoria atribuída a ele; voo realizado. |
+| Fluxo principal | 1. Piloto abre a vistoria e vê o mapa do talhão.<br>2. Pede o link de envio.<br>3. Sistema gera link temporário do S3 só para aquela vistoria.<br>4. Piloto envia o ortomosaico e as fotos em partes.<br>5. Upload concluído dispara a validação.<br>6. Sistema confere georreferência, data e cobertura.<br>7. Vistoria fica RECEBIDA e o analista é avisado. |
+| Alternativas | Conexão caiu: retomar o envio de onde parou.<br>Link expirou: pedir um novo.<br>Imagem inválida ou cobertura abaixo de 95%: recusar com motivo; vistoria volta para pendente.<br>Contorno do voo difere do polígono: sugerir novo contorno ao produtor (RF-DRN-07). |
+| Pós-condição | Imagem validada, guardada e disponível como evidência. |
+| Requisitos | RF-DRN-03, RF-DRN-04, RF-DRN-07, RN-11, RNF-PER-06, RNF-PER-07, RNF-SEG-10. |
+
 ## 5. Cenários arquiteturais
 
 | ID | Cenário | Resultado verificável | Requisitos relacionados |
@@ -209,6 +240,7 @@ disparado por eventos (novo polígono ou novo dataset), sem ator humano.
 | CA-ARQ-007 | Configurar segurança | TLS, KMS, Cognito/MFA, IAM, Secrets Manager e auditoria. | RNF-SEG-01 a 09 |
 | CA-ARQ-008 | Configurar observabilidade e DR | Dashboards, alarmes, backup, restore e runbooks. | RNF-OPS-01 a 06, RNF-CON-03, RNF-CON-04 |
 | CA-ARQ-009 | Configurar CI/CD e custos | Build estrito, testes, rollback, Budgets e estimativa. | RNF-MAN-01 a 07, RNF-CUS-01 a 05 |
+| CA-ARQ-010 | Implantar recepção de imagens de drone | Link temporário, upload em partes, evento de upload concluído, Lambda de validação e lifecycle. | RNF-PER-06 a 08, RNF-SEG-10, RNF-CUS-06 |
 
 ## 6. Matriz de rastreabilidade
 
@@ -220,6 +252,7 @@ disparado por eventos (novo polígono ou novo dataset), sem ator humano.
 | Dados ambientais | RF-AMB-01 a 04 | RNF-CON-06, RNF-OPS-06 | UC-FUN-004; CA-ARQ-004 |
 | Status de risco | RF-RSK-01 a 05 | RNF-PER-02, RNF-CON-07, RNF-SEG-08 | UC-FUN-005, UC-FUN-007 |
 | Decisão na balança | RF-LOT-01 a 04 | RNF-PER-01, RNF-CAP-02, RNF-CON-02 | UC-FUN-006; CA-ARQ-005 |
+| Vistoria por drone | RF-DRN-01 a 07 | RNF-PER-06 a 08, RNF-SEG-10, RNF-CUS-06 | UC-FUN-011, UC-FUN-012; CA-ARQ-010 |
 | Notificações | RF-ALT-01 a 03 | RNF-CON-07 | UC-FUN-008 |
 | Histórico e mapa | RF-HIS-01, RF-HIS-02 | RNF-PER-04, RNF-PER-05 | UC-FUN-009; CA-ARQ-006 |
 | Auditoria | RF-AUD-01, RF-AUD-02 | RNF-CON-05, RNF-SEG-06, RNF-SEG-08 | UC-FUN-010; CA-ARQ-007 |
@@ -232,7 +265,8 @@ disparado por eventos (novo polígono ou novo dataset), sem ator humano.
 | -- | -- | -- | -- | -- |
 | 1.0 | 08/09/2026 | Substituída | Casos de provisionamento arquitetural. | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
 | 1.1 | 17/09/2026 | Substituída | Casos funcionais de telemetria IoT. | Equipe do projeto |
-| 2.0 | 01/10/2026 | Em revisão | Casos de uso para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.0 | 01/10/2026 | Substituída | Casos de uso para rastreabilidade e conformidade EUDR. | Equipe do projeto |
+| 2.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

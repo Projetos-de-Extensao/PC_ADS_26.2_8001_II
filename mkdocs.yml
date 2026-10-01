@@ -12,6 +12,7 @@ nav:
       - Documento de Visão: Iniciacao/documento_de_visao.md
   - Elaboração:
       - Index: Elaboracao/index.md
+      - Arquitetura: Elaboracao/arquitetura.md
       - Requisitos Funcionais: Elaboracao/levreq.md
       - Requisitos Suplementares: Elaboracao/requisitos_suplementares.md
       - Casos de Uso: Elaboracao/casos_de_uso.md

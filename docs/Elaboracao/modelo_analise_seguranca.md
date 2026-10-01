@@ -3,11 +3,11 @@ id: modelo_analise_seguranca
 title: Modelo de Análise (Segurança)
 ---
 
-# Modelo de Análise (Pacotes de Segurança) (v1.0)
+# Modelo de Análise (Pacotes de Segurança) (v2.0)
 
-**Projeto**: Lavoura Inteligente — Plataforma de Telemetria Agrícola<br>
+**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
-**Data**: 22/09/2026<br>
+**Data**: 01/10/2026<br>
 **Status**: Em revisão
 
 ## 1. Introdução
@@ -15,25 +15,23 @@ title: Modelo de Análise (Segurança)
 ### 1.1. Propósito
 
 Este documento organiza, em pacotes coesos, os controles de segurança definidos no
-Documento de Visão (seção de metas de qualidade), no Documento de Requisitos
-Suplementares (RNF-SEG-01 a RNF-SEG-09) e no cenário arquitetural **CA-ARQ-007 —
-Configurar segurança** do documento de Casos de Uso. O objetivo é dar rastreabilidade
-entre requisito, pacote, serviço AWS e controle técnico, facilitando a implementação e a
-revisão pelo responsável de segurança e pelo professor.
+Documento de Requisitos Suplementares (RNF-SEG-01 a RNF-SEG-09) e no cenário
+arquitetural **CA-ARQ-007 — Configurar segurança**. O objetivo é dar rastreabilidade
+entre requisito, pacote, serviço AWS e controle técnico.
 
 ### 1.2. Escopo
 
 O modelo cobre a proteção de:
 
-- dados pessoais de administradores, agrônomos, produtores e gestores (LGPD);
-- credenciais e identidade dos sensores IoT (RF-SEN-01, RNF-SEG-08);
-- telemetria agrícola (umidade, acidez, temperatura, clima) em repouso e em trânsito;
-- credenciais do RDS PostgreSQL e segredos de integração (ex.: provedor meteorológico);
-- trilha de auditoria de ações administrativas e de segurança (RNF-SEG-06, RF-AUD-01).
+- dados pessoais de produtores e usuários (nome, documento, contato, localização da
+  propriedade), tratados segundo a LGPD;
+- polígonos dos talhões e documentos de origem;
+- evidências que sustentam cada status (precisam ser íntegras por no mínimo 5 anos);
+- status operacional consultado na balança;
+- credenciais do banco PostGIS, das fontes ambientais e da integração com a balança;
+- trilha de auditoria de ações críticas.
 
-Ficam fora do escopo os controles de continuidade, backup e observabilidade geral, que
-pertencem ao cenário **CA-ARQ-008 — Configurar observabilidade e DR** e são tratados no
-Documento de Requisitos Suplementares (RNF-OPS, RNF-CON).
+Observabilidade geral, backup e recuperação pertencem ao cenário **CA-ARQ-008**.
 
 ### 1.3. Definições e siglas
 
@@ -43,21 +41,19 @@ Documento de Requisitos Suplementares (RNF-OPS, RNF-CON).
 | KMS | Key Management Service |
 | CMK | Customer Managed Key |
 | SG | Security Group |
-| NACL | Network Access Control List |
-| RBAC | Role-Based Access Control |
 | MFA | Multi-Factor Authentication |
 | LGPD | Lei Geral de Proteção de Dados |
 | TLS | Transport Layer Security |
 | SSE | Server-Side Encryption |
-| VPC Endpoint | Ponto de acesso privado a um serviço AWS sem sair da rede da VPC |
+| WAF | Web Application Firewall |
+| VPC Endpoint | Acesso privado a um serviço AWS sem passar pela internet |
+| Object Lock | Recurso do S3 que impede apagar ou alterar um objeto durante a retenção |
 
 ### 1.4. Referências
 
-- Documento de Visão — Lavoura Inteligente (v1.1), seção 7 (Metas de qualidade).
-- Documento de Requisitos Suplementares — Lavoura Inteligente (v1.1), seção 6
-  (Segurança e privacidade).
-- Casos de Uso — Lavoura Inteligente (v1.1), seção 5 (Cenários arquiteturais,
-  CA-ARQ-001, CA-ARQ-002, CA-ARQ-007).
+- Documento de Visão (v2.0) e Documento de Arquitetura (v1.0).
+- Documento de Requisitos Suplementares (v2.0), seção 6.
+- Casos de Uso (v2.0), cenários CA-ARQ-001 e CA-ARQ-007.
 - AWS Well-Architected Framework — Security Pillar.
 - Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
 
@@ -72,25 +68,27 @@ skinparam packageStyle rectangle
 title Modelo de Análise (Pacotes) - Segurança Lavoura Inteligente
 
 package "Identity & Access" as IAM_PKG #E8F0FE {
-  [IAM Users]
-  [IAM Roles]
+  [Cognito User Pool]
+  [Grupos por perfil]
   [MFA]
-  [RBAC]
-  [Identidade de Sensores]
+  [IAM Roles por Lambda]
+  [Credencial da balança]
 }
 
 package "Network Security" as NET_PKG #FFF4E5 {
+  [VPC privada]
   [Security Groups]
-  [NACLs]
-  [TLS / ALB]
   [VPC Endpoints]
+  [TLS / CloudFront / API Gateway]
+  [WAF]
 }
 
 package "Data Protection" as DATA_PKG #E8F5E9 {
   [KMS Keys]
-  [RDS Encryption]
+  [RDS/PostGIS Encryption]
   [DynamoDB Encryption]
   [S3 Encryption]
+  [Object Lock + Hash]
 }
 
 package "Secrets Management" as SEC_PKG #FCE4EC {
@@ -100,7 +98,8 @@ package "Secrets Management" as SEC_PKG #FCE4EC {
 
 package "Audit & Compliance" as AUD_PKG #EDE7F6 {
   [CloudTrail]
-  [Trilha de Auditoria]
+  [Trilha da aplicação]
+  [Pacote auditável]
   [Inventário LGPD]
 }
 
@@ -117,25 +116,25 @@ AUD_PKG ..> DATA_PKG
 
 | Pacote | Responsabilidade | Serviços AWS | Requisitos atendidos |
 | -- | -- | -- | -- |
-| Identity & Access | Autenticar e autorizar usuários e sensores. | IAM, MFA, RBAC | RNF-SEG-03, RNF-SEG-04, RNF-SEG-08 |
-| Network Security | Filtrar e proteger o tráfego de rede. | Security Groups, NACLs, ALB/TLS, VPC Endpoints | RNF-SEG-01, RNF-SEG-09 |
-| Data Protection | Criptografar dados em repouso. | KMS, RDS, DynamoDB, S3 | RNF-SEG-02 |
-| Secrets Management | Proteger credenciais e segredos. | Secrets Manager | RNF-SEG-05 |
-| Audit & Compliance | Registrar ações e evidenciar conformidade LGPD. | CloudTrail, S3 Log Bucket | RNF-SEG-06, RNF-SEG-07 |
+| Identity & Access | Autenticar usuários, autorizar por perfil e controlar permissões de serviços e da balança. | Cognito, IAM, API Gateway | RNF-SEG-03, RNF-SEG-04, RNF-SEG-09 |
+| Network Security | Isolar o banco e proteger a entrada HTTPS. | VPC, Security Groups, VPC Endpoints, CloudFront, WAF | RNF-SEG-01 |
+| Data Protection | Criptografar dados e garantir integridade das evidências. | KMS, RDS, DynamoDB, S3 Object Lock | RNF-SEG-02, RNF-SEG-08 |
+| Secrets Management | Manter credenciais fora do código. | Secrets Manager | RNF-SEG-05 |
+| Audit & Compliance | Registrar ações e evidenciar conformidade LGPD. | CloudTrail, DynamoDB, S3 | RNF-SEG-06, RNF-SEG-07 |
 
 ### 2.3. Matriz de rastreamento resumida
 
 | Requisito | Pacote responsável | Serviço AWS | Controle |
 | -- | -- | -- | -- |
-| RNF-SEG-01 (TLS 1.2+) | Network Security | ALB, API Gateway, ACM | Listener HTTPS obrigatório |
+| RNF-SEG-01 (TLS 1.2+) | Network Security | CloudFront, API Gateway, ACM | Somente HTTPS |
 | RNF-SEG-02 (criptografia em repouso) | Data Protection | KMS, RDS, DynamoDB, S3 | SSE-KMS / RDS Encryption |
-| RNF-SEG-03 (MFA/RBAC) | Identity & Access | IAM | MFA obrigatório, grupos por perfil |
-| RNF-SEG-04 (menor privilégio) | Identity & Access | IAM Roles/Policies | Role específica por componente |
+| RNF-SEG-03 (MFA e perfis) | Identity & Access | Cognito | MFA obrigatório e grupos |
+| RNF-SEG-04 (menor privilégio) | Identity & Access | IAM | Role específica por Lambda |
 | RNF-SEG-05 (segredos fora do código) | Secrets Management | Secrets Manager | Rotação automática |
-| RNF-SEG-06 (auditabilidade) | Audit & Compliance | CloudTrail | Trilha com autor, data e correlação |
-| RNF-SEG-07 (LGPD) | Audit & Compliance | CloudTrail, inventário | Base legal, minimização, retenção |
-| RNF-SEG-08 (identidade de sensor revogável) | Identity & Access | IAM/credencial de sensor | Rotação e revogação individual |
-| RNF-SEG-09 (anti-replay) | Network Security / Ingestão | API Gateway, Lambda | Timestamp, nonce, janela de aceitação |
+| RNF-SEG-06 (auditabilidade) | Audit & Compliance | CloudTrail, trilha da aplicação | Autor, data e correlation ID |
+| RNF-SEG-07 (LGPD) | Audit & Compliance | Inventário de dados | Finalidade, base legal, retenção |
+| RNF-SEG-08 (integridade de evidências) | Data Protection | S3 Object Lock, SHA-256 | Evidência imutável e verificável |
+| RNF-SEG-09 (balança autenticada) | Identity & Access | API Gateway | Credencial por cooperativa e limite de uso |
 
 ## 3. Especificação dos pacotes
 
@@ -143,19 +142,20 @@ AUD_PKG ..> DATA_PKG
 
 #### 3.1.1. Responsabilidade
 
-Gerenciar identidades humanas (Administrador, Agrônomo, Gestor, Auditor) e de serviço
-(EC2, Lambda, RDS), além da identidade individual e revogável de cada sensor IoT
-(RF-SEN-01, RNF-SEG-08).
+Gerenciar identidades humanas (Administrador, Produtor/Cooperativa, Analista, Operador
+da balança, Gestor, Auditor), identidades de serviço (Lambdas) e a credencial da
+integração com a balança.
 
 #### 3.1.2. Elementos do pacote
 
 | Elemento | Descrição | Serviço AWS |
 | -- | -- | -- |
-| IAM Users/Groups | Usuários humanos agrupados por perfil (RBAC). | IAM |
-| IAM Roles | Identidades para EC2, Lambda e RDS. | IAM Roles |
-| IAM Policies | Permissões granulares por componente. | IAM Policies |
-| MFA | Autenticação multifator para perfis administrativos. | IAM MFA |
-| Credencial de Sensor | Identidade individual, rotacionável e revogável do sensor. | IAM/API Key gerenciada |
+| User Pool | Cadastro e login dos usuários. | Amazon Cognito |
+| Grupos por perfil | Um grupo por perfil, usado na autorização. | Cognito Groups |
+| MFA | Segundo fator para perfis sensíveis. | Cognito MFA |
+| Authorizer | Valida o token em cada chamada da API. | API Gateway + Cognito |
+| IAM Roles | Uma role por função Lambda. | IAM |
+| Credencial da balança | Chave por cooperativa com plano de uso (limite de requisições). | API Gateway Usage Plans |
 
 #### 3.1.3. Diagrama de classes de análise
 
@@ -167,15 +167,21 @@ class Usuario {
   -id: String
   -nome: String
   -email: String
-  -perfil: Administrador/Agronomo/Gestor/Auditor
+  -perfil: Admin/Produtor/Analista/Operador/Gestor/Auditor
+  -escopo: List<CooperativaId>
   -mfaHabilitado: Boolean
   +autenticar(): Token
   +autorizar(recurso, acao): Boolean
 }
 
+class Grupo {
+  -nome: String
+  -permissoes: List<String>
+}
+
 class IAMRole {
   -nome: String
-  -escopoServico: String
+  -funcaoLambda: String
   +assumirRole(): Credentials
 }
 
@@ -183,90 +189,92 @@ class IAMPolicy {
   -nome: String
   -documento: JSON
   -efeito: Allow/Deny
-  +validar(): Boolean
 }
 
-class MFADevice {
-  -tipo: Virtual/Hardware
-  +gerarCodigo(): String
-  +validarCodigo(codigo): Boolean
-}
-
-class CredencialSensor {
-  -sensorId: String
-  -status: Ativo/Revogado
-  -dataRotacao: Date
-  +rotacionar(): void
+class CredencialBalanca {
+  -cooperativaId: String
+  -status: Ativa/Revogada
+  -limiteRequisicoes: Integer
   +revogar(): void
+  +rotacionar(): void
 }
 
-Usuario "1" -- "0..1" MFADevice : usa
-Usuario "1" -- "*" IAMRole : possui
+Usuario "*" -- "1" Grupo : pertence
 IAMRole "1" -- "*" IAMPolicy : possui
-CredencialSensor "1" -- "1" IAMPolicy : restrita por
 @enduml
 ```
 
-#### 3.1.4. Roles e permissões (Lavoura Inteligente)
+#### 3.1.4. Perfis e roles
 
-| Role | Tipo | Serviços acessados | Permissões | Justificativa |
-| -- | -- | -- | -- | -- |
-| Administrador | Humano | Portal completo | RBAC total, MFA obrigatório | Gestão de cadastros, sensores e limiares. |
-| Agrônomo | Humano | Painel, alertas | Leitura e tratamento de alerta no escopo da fazenda | Monitorar talhões (UC-FUN-006/007). |
-| Gestor agrícola | Humano | Relatórios | Somente leitura de indicadores e safras | Consolidar dados sem acessar ingestão. |
-| Auditor | Humano | Trilha de auditoria | Somente leitura | RF-AUD-01, sem permissão de alteração. |
-| EC2-API-Role | Serviço | RDS, Secrets Manager | Acesso mínimo à base administrativa | Django REST Framework acessa RDS. |
-| Lambda-Ingestao-Role | Serviço | DynamoDB, CloudWatch Logs | PutItem restrito à tabela de telemetria | UC-FUN-005, CA-ARQ-004. |
-| Lambda-Alertas-Role | Serviço | DynamoDB Streams, SNS | GetRecords + Publish | UC-FUN-007, CA-ARQ-005. |
-| Lambda-Arquivamento-Role | Serviço | DynamoDB Streams, S3 | GetRecords + PutObject | CA-ARQ-006. |
-| RDS-Role | Serviço | KMS | Encrypt/Decrypt | Criptografia do banco administrativo. |
+| Perfil / Role | Tipo | Acesso | Justificativa |
+| -- | -- | -- | -- |
+| Administrador | Humano (MFA) | Usuários, parâmetros, integrações | Gestão da plataforma. |
+| Produtor/Cooperativa | Humano | Cadastro e polígonos do seu escopo | Manter dados de origem. |
+| Analista de conformidade | Humano (MFA) | Evidências e revisão de status | UC-FUN-007. |
+| Operador da balança | Humano | Registro de lote e consulta de status | UC-FUN-006. |
+| Gestor | Humano | Dashboard e histórico (leitura) | UC-FUN-009. |
+| Auditor | Humano (MFA) | Trilhas e pacotes (somente leitura) | UC-FUN-010. |
+| Lambda-Ingestao-Role | Serviço | S3 (PutObject), RDS via Secrets, EventBridge (PutEvents) | UC-FUN-003/004. |
+| Lambda-Analise-Role | Serviço | RDS via Secrets, DynamoDB (PutItem), S3 evidências, EventBridge | UC-FUN-005. |
+| Lambda-Status-Role | Serviço | DynamoDB (GetItem/Query), registro de lote | UC-FUN-006. |
+| Lambda-Notificacao-Role | Serviço | SNS (Publish) | UC-FUN-008. |
 
-#### 3.1.5. Política IAM de exemplo (Lambda-Ingestao-Role)
+#### 3.1.5. Política IAM de exemplo (Lambda-Status-Role)
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "DynamoDBIngestao",
+      "Sid": "LerStatus",
       "Effect": "Allow",
-      "Action": ["dynamodb:PutItem", "dynamodb:GetItem"],
-      "Resource": "arn:aws:dynamodb:REGIAO:CONTA:table/telemetria"
+      "Action": ["dynamodb:GetItem", "dynamodb:Query"],
+      "Resource": "arn:aws:dynamodb:REGIAO:CONTA:table/status-talhoes"
     },
     {
-      "Sid": "LogsIngestao",
+      "Sid": "RegistrarLote",
+      "Effect": "Allow",
+      "Action": ["dynamodb:PutItem"],
+      "Resource": "arn:aws:dynamodb:REGIAO:CONTA:table/lotes"
+    },
+    {
+      "Sid": "Logs",
       "Effect": "Allow",
       "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": "arn:aws:logs:REGIAO:CONTA:log-group:/lambda/ingestao:*"
+      "Resource": "arn:aws:logs:REGIAO:CONTA:log-group:/aws/lambda/consulta-status:*"
     }
   ]
 }
 ```
 
+A role da consulta na balança só lê o status: ela não consegue alterar status nem
+acessar o banco geoespacial.
+
 #### 3.1.6. Riscos e mitigações
 
 | Risco | Mitigação |
 | -- | -- |
-| Credenciais de sensor compartilhadas entre dispositivos | Identidade individual por sensor (RF-SEN-01). |
-| Permissões amplas em roles de serviço | Menor privilégio por componente (RNF-SEG-04). |
-| Acesso administrativo sem segundo fator | MFA obrigatório para Administrador, Agrônomo, Gestor e Auditor. |
-| Sensor comprometido | Revogação individual sem afetar os demais (RNF-SEG-08). |
+| Operador alterar status indevidamente | Perfil de operador sem permissão de escrita no status. |
+| Credencial da balança vazada | Chave por cooperativa, revogável, com limite de requisições. |
+| Permissões amplas em Lambdas | Role específica por função (RNF-SEG-04). |
+| Conta administrativa comprometida | MFA obrigatório e alarme de login suspeito. |
 
 ### 3.2. Pacote: Network Security
 
 #### 3.2.1. Responsabilidade
 
-Filtrar o tráfego entre camadas públicas e privadas e garantir que toda comunicação
-externa use TLS, conforme CA-ARQ-001 e CA-ARQ-002.
+Manter o banco PostGIS fora da internet, proteger a entrada HTTPS e permitir que as
+Lambdas acessem serviços AWS sem NAT Gateway.
 
 #### 3.2.2. Elementos do pacote
 
 | Elemento | Descrição | Serviço AWS |
 | -- | -- | -- |
-| Security Groups | Firewall stateful por instância/serviço. | VPC |
-| NACLs | Firewall stateless por sub-rede. | VPC |
-| TLS/ALB | Terminação HTTPS com certificado gerenciado. | ACM + ALB |
-| VPC Endpoints | Acesso privado a S3 e DynamoDB sem NAT. | VPC Gateway/Interface Endpoints |
+| VPC privada | Sub-redes privadas em duas AZs para RDS e Lambdas geoespaciais. | VPC |
+| Security Groups | Firewall entre Lambdas e RDS. | VPC |
+| VPC Endpoints | Gateway para S3 e DynamoDB; Interface para Secrets Manager e EventBridge. | VPC Endpoints |
+| TLS | HTTPS no CloudFront e no API Gateway com certificado gerenciado. | ACM |
+| WAF | Limite de requisições e regras gerenciadas na API. | AWS WAF |
 
 #### 3.2.3. Diagrama de classes de análise
 
@@ -281,28 +289,25 @@ class SecurityGroup {
   +adicionarRegraSaida(regra): void
 }
 
-class NACL {
-  -nome: String
-  -subnetId: String
-  +adicionarRegra(regra): void
-}
-
 class Regra {
-  -protocolo: TCP/UDP
+  -protocolo: TCP
   -porta: String
   -origem: String
-  -acao: Allow/Deny
+  -acao: Allow
 }
 
-class TLSListener {
-  -certificado: ACMCertificate
-  -versaoMinima: String
-  +validarConexao(): Boolean
+class VPCEndpoint {
+  -servico: S3/DynamoDB/SecretsManager/EventBridge
+  -tipo: Gateway/Interface
+}
+
+class EntradaHTTPS {
+  -servico: CloudFront/API Gateway
+  -versaoMinimaTLS: String
+  -waf: Boolean
 }
 
 SecurityGroup "1" -- "*" Regra : contém
-NACL "1" -- "*" Regra : contém
-TLSListener "1" -- "1" SecurityGroup : protegido por
 @enduml
 ```
 
@@ -310,34 +315,40 @@ TLSListener "1" -- "1" SecurityGroup : protegido por
 
 | Security Group | Entrada | Origem | Saída | Destino | Justificativa |
 | -- | -- | -- | -- | -- | -- |
-| SG-ALB | 443 | 0.0.0.0/0 | 8000 | SG-EC2 | Único ponto público, HTTPS. |
-| SG-EC2 (portal) | 8000 | SG-ALB | 5432 | SG-RDS | API acessada apenas pelo ALB. |
-| SG-RDS | 5432 | SG-EC2 | — | — | Banco acessível apenas pela API administrativa. |
-| SG-Lambda (ingestão/alertas) | — | — | 443 | VPC Endpoints | Acesso a DynamoDB/S3/Secrets sem NAT. |
+| SG-Lambda-Geo | — | — | 5432 | SG-RDS | Lambdas de ingestão/análise acessam o PostGIS. |
+| SG-Lambda-Geo | — | — | 443 | SG-Endpoints | Acesso a Secrets Manager e EventBridge. |
+| SG-RDS | 5432 | SG-Lambda-Geo | — | — | Banco acessível apenas pelas Lambdas autorizadas. |
+| SG-Endpoints | 443 | SG-Lambda-Geo | — | — | Interface Endpoints privados. |
+
+A Lambda de consulta na balança fica **fora da VPC**, pois só acessa o DynamoDB; isso
+reduz latência e custo.
 
 #### 3.2.5. Riscos e mitigações
 
 | Risco | Mitigação |
 | -- | -- |
-| Regras permissivas (0.0.0.0/0) fora do ALB | Revisão periódica; apenas SG-ALB expõe porta pública. |
-| Tráfego HTTP sem criptografia | RNF-SEG-01: apenas HTTPS/TLS 1.2+, redireciona ou recusa HTTP. |
-| Replay de requisições de sensores | RNF-SEG-09: timestamp, nonce e janela de aceitação na Lambda de ingestão. |
+| Banco exposto à internet | RDS sem IP público, em sub-rede privada. |
+| Tráfego sem criptografia | Somente HTTPS com TLS 1.2+ (RNF-SEG-01). |
+| Abuso da API / força bruta | WAF com limite de taxa e plano de uso por cooperativa. |
+| Custo de NAT Gateway | VPC Endpoints para S3, DynamoDB e serviços usados. |
 
 ### 3.3. Pacote: Data Protection
 
 #### 3.3.1. Responsabilidade
 
-Garantir que toda telemetria e dado pessoal seja criptografado em repouso, conforme
-RNF-SEG-02 e a classificação de dados exigida pela LGPD.
+Criptografar todos os dados em repouso e garantir que as evidências usadas em um status
+não possam ser alteradas nem apagadas durante a retenção.
 
 #### 3.3.2. Elementos do pacote
 
 | Elemento | Descrição | Serviço AWS |
 | -- | -- | -- |
-| KMS Keys | Chaves de criptografia gerenciadas (CMK). | KMS |
-| RDS Encryption | Criptografia do banco administrativo. | RDS + KMS |
-| DynamoDB Encryption | Criptografia da telemetria. | DynamoDB + KMS |
-| S3 Encryption | Criptografia do arquivo histórico de safras. | S3 + KMS |
+| KMS Keys | Chaves gerenciadas para cada camada de dados. | KMS |
+| RDS Encryption | Criptografia do PostgreSQL/PostGIS e dos backups. | RDS + KMS |
+| DynamoDB Encryption | Criptografia do status e dos eventos. | DynamoDB + KMS |
+| S3 Encryption | Criptografia do data lake e das evidências. | S3 + KMS |
+| Object Lock | Evidências imutáveis por 5 anos. | S3 Object Lock |
+| Hash de integridade | SHA-256 de cada arquivo e evidência. | Lambda |
 
 #### 3.3.3. Diagrama de classes de análise
 
@@ -359,7 +370,18 @@ class EncryptionConfig {
   +aplicar(): void
 }
 
+class Evidencia {
+  -evidenciaId: String
+  -talhaoId: String
+  -versaoPoligono: Integer
+  -datasets: List<String>
+  -hashSHA256: String
+  -retencaoAte: Date
+  +verificarIntegridade(): Boolean
+}
+
 EncryptionConfig "1" -- "1" KMSKey : usa
+Evidencia "*" -- "1" KMSKey : protegida por
 @enduml
 ```
 
@@ -367,35 +389,32 @@ EncryptionConfig "1" -- "1" KMSKey : usa
 
 | Serviço | Em repouso | Em trânsito | Chave | Justificativa |
 | -- | -- | -- | -- | -- |
-| RDS PostgreSQL | AES-256 (KMS) | TLS 1.2+ | CMK dedicada | Dados de usuários e cadastros (LGPD). |
-| DynamoDB | AES-256 | TLS 1.2+ | AWS Managed ou CMK | Telemetria dos sensores. |
-| S3 (arquivo de safras) | SSE-KMS | TLS 1.2+ | CMK dedicada | Histórico particionado por fazenda/safra. |
-| Secrets Manager | AES-256 | TLS 1.2+ | AWS Managed | Credenciais e segredos de integração. |
-
-Backups e recuperação (RDS PITR, DynamoDB PITR) seguem a política definida no cenário
-CA-ARQ-008 e no RNF-OPS-04; este pacote garante apenas que os dados protegidos por
-backup já estejam criptografados na origem.
+| RDS PostgreSQL/PostGIS | AES-256 | TLS 1.2+ | CMK | Dados pessoais e polígonos. |
+| DynamoDB | AES-256 | TLS 1.2+ | CMK | Status e eventos. |
+| S3 data lake | SSE-KMS | TLS 1.2+ | CMK | Arquivos brutos e histórico. |
+| S3 evidências | SSE-KMS + Object Lock | TLS 1.2+ | CMK | Integridade por 5 anos. |
+| Secrets Manager | AES-256 | TLS 1.2+ | AWS Managed | Credenciais. |
 
 #### 3.3.5. Riscos e mitigações
 
 | Risco | Mitigação |
 | -- | -- |
-| Chave comprometida | Rotação automática da CMK e revisão de política de chave. |
-| Dado gravado sem criptografia | Criptografia obrigatória habilitada na definição de infraestrutura (IaC). |
+| Evidência alterada após a decisão | Object Lock e hash conferido no pacote auditável. |
+| Chave comprometida | Rotação anual automática da CMK e política de chave restrita. |
+| Dado gravado sem criptografia | Criptografia obrigatória definida na IaC. |
 
 ### 3.4. Pacote: Secrets Management
 
 #### 3.4.1. Responsabilidade
 
-Impedir que credenciais e segredos apareçam em código, configuração ou logs
-(RNF-SEG-05).
+Impedir que credenciais apareçam em código, configuração ou logs (RNF-SEG-05).
 
 #### 3.4.2. Elementos do pacote
 
 | Elemento | Descrição | Serviço AWS |
 | -- | -- | -- |
-| Secrets Manager | Armazenamento de segredos com rotação automática. | Secrets Manager |
-| Rotation Policies | Política de rotação periódica. | Lambda + Secrets Manager |
+| Secrets Manager | Armazenamento de segredos com rotação. | Secrets Manager |
+| Rotation Policies | Rotação automática periódica. | Lambda + Secrets Manager |
 
 #### 3.4.3. Diagrama de classes de análise
 
@@ -406,7 +425,7 @@ title Pacote Secrets Management - Classes de Análise
 class Segredo {
   -nome: String
   -rotacaoHabilitada: Boolean
-  -valor: String (encrypted)
+  -valor: String (criptografado)
   +getValor(): String
   +rotacionar(): void
 }
@@ -423,34 +442,36 @@ Segredo "1" -- "0..1" PoliticaRotacao : usa
 
 #### 3.4.4. Segredos gerenciados
 
-| Segredo | Serviço | Rotação | Acesso | Justificativa |
-| -- | -- | -- | -- | -- |
-| rds-credentials | RDS PostgreSQL | 90 dias | EC2-API-Role | Evita credencial hardcoded na API. |
-| meteo-api-key | Provedor meteorológico | Conforme contrato | Lambda de integração | RF-MET-01, RNF-OPS-07. |
-| sns-canal-config | Canal de notificação de alertas | 180 dias | Lambda-Alertas-Role | Credencial do canal externo de alerta. |
+| Segredo | Uso | Rotação | Acesso |
+| -- | -- | -- | -- |
+| rds-postgis-credentials | Banco geoespacial | 30 dias | Lambda-Ingestao-Role, Lambda-Analise-Role |
+| fontes-ambientais-credentials | APIs de fontes que exigem login (ex.: Copernicus/Sentinel) | Conforme fornecedor | Lambda-Ingestao-Role |
+
+As chaves da balança são gerenciadas pelos planos de uso do API Gateway (pacote
+Identity & Access).
 
 #### 3.4.5. Riscos e mitigações
 
 | Risco | Mitigação |
 | -- | -- |
-| Segredo em variável de ambiente ou código | Varredura do repositório; leitura só via Secrets Manager em runtime. |
-| Rotação manual esquecida | Rotação automática via Lambda vinculada ao Secrets Manager. |
+| Segredo em variável de ambiente ou código | Leitura somente via Secrets Manager; varredura no CI. |
+| Rotação esquecida | Rotação automática. |
 
 ### 3.5. Pacote: Audit & Compliance
 
 #### 3.5.1. Responsabilidade
 
-Registrar toda ação crítica com autor, data e correlação (RNF-SEG-06) e sustentar a
-conformidade com a LGPD (RNF-SEG-07), respondendo ao caso de uso UC-FUN-009 e ao
-requisito RF-AUD-01.
+Registrar toda ação crítica com autor, data e correlação (RNF-SEG-06), sustentar a
+LGPD (RNF-SEG-07) e permitir gerar o pacote auditável (UC-FUN-010).
 
 #### 3.5.2. Elementos do pacote
 
 | Elemento | Descrição | Serviço AWS |
 | -- | -- | -- |
-| CloudTrail | Registro de chamadas de API e ações administrativas. | CloudTrail |
-| S3 Log Bucket | Armazenamento imutável da trilha. | S3 |
-| Inventário LGPD | Catálogo de dados pessoais, finalidade e base legal. | Documentação interna |
+| CloudTrail | Registro de chamadas de API na conta AWS. | CloudTrail |
+| Trilha da aplicação | Eventos de negócio (revisão, decisão na balança, alteração de polígono). | DynamoDB + S3 |
+| Pacote auditável | Conjunto de evidências por produtor ou lote. | S3 |
+| Inventário LGPD | Dados pessoais, finalidade, base legal e retenção. | Documentação |
 
 #### 3.5.3. Diagrama de classes de análise
 
@@ -470,64 +491,85 @@ class TrilhaAuditoria {
   +consultar(filtro): List<EventoAuditoria>
 }
 
+class PacoteAuditavel {
+  -alvo: Produtor/Lote
+  -evidencias: List<Evidencia>
+  -geradoEm: DateTime
+  +gerar(): URL
+  +verificarHashes(): Boolean
+}
+
 class InventarioDado {
   -categoria: String
-  -titular: String
+  -finalidade: String
   -baseLegal: String
-  -retencaoDias: Integer
+  -retencao: String
 }
 
 TrilhaAuditoria "1" -- "*" EventoAuditoria : contém
+PacoteAuditavel "1" -- "*" EventoAuditoria : inclui
 @enduml
 ```
 
-#### 3.5.4. Eventos auditados (RNF-SEG-06)
+#### 3.5.4. Eventos auditados
 
 | Evento | Ator | Evidência mínima |
 | -- | -- | -- |
-| Login administrativo | Todos os perfis | Usuário, data/hora, resultado (sucesso/falha). |
-| Alteração de limiar | Administrador | Valor anterior, novo valor, versão, aprovador. |
-| Provisionamento/revogação de credencial de sensor | Administrador | Sensor afetado, ação, data/hora. |
+| Login | Todos os perfis | Usuário, data/hora, resultado. |
+| Envio ou alteração de polígono | Produtor/Cooperativa | Versão anterior e nova, hash do arquivo. |
+| Revisão de status | Analista | Status anterior, novo status, justificativa. |
+| Decisão na balança | Operador | Lote, status consultado, decisão. |
 | Alteração de permissão | Administrador | Usuário afetado, perfil anterior e novo. |
-| Exclusão de cadastro | Administrador | Recurso excluído, justificativa. |
+| Geração de pacote auditável | Auditor | Alvo, data, resultado da verificação de hashes. |
 
-#### 3.5.5. Riscos e mitigações
+#### 3.5.5. Inventário LGPD (resumo)
+
+| Dado | Titular | Finalidade | Retenção |
+| -- | -- | -- | -- |
+| Nome e CPF/CNPJ | Produtor | Identificar a origem do lote | Enquanto houver evidência vinculada (mínimo 5 anos) |
+| Contato (e-mail/telefone) | Produtor, usuários | Notificações | Enquanto o cadastro estiver ativo |
+| Localização da propriedade (polígono) | Produtor | Análise de risco | Mínimo 5 anos |
+| Logs de acesso | Usuários | Segurança e auditoria | Definida na política de retenção |
+
+#### 3.5.6. Riscos e mitigações
 
 | Risco | Mitigação |
 | -- | -- |
-| Trilha alterável | Bucket S3 com versionamento e política de bloqueio de exclusão. |
-| Inventário LGPD desatualizado | Revisão a cada ciclo de entrega, junto ao responsável de segurança. |
+| Trilha alterável | Eventos copiados para S3 com Object Lock. |
+| Coleta excessiva de dados pessoais | Minimização: só o necessário para identificar a origem. |
+| Inventário desatualizado | Revisão a cada ciclo de entrega. |
 
 ## 4. Dependências entre pacotes
 
 | De | Para | Motivo |
 | -- | -- | -- |
-| Network Security | Identity & Access | Security Groups liberam tráfego apenas para roles/serviços autorizados. |
-| Identity & Access | Data Protection | Apenas roles autorizadas usam as chaves KMS. |
-| Data Protection | Secrets Management | Segredos de acesso a chaves e bancos ficam no Secrets Manager. |
-| Audit & Compliance | Identity & Access | CloudTrail registra ações de usuários e roles IAM. |
-| Audit & Compliance | Network Security | CloudTrail registra alterações em Security Groups e NACLs. |
-| Audit & Compliance | Data Protection | CloudTrail registra uso e alteração de chaves KMS. |
+| Network Security | Identity & Access | Só roles autorizadas alcançam o RDS e os endpoints. |
+| Identity & Access | Data Protection | Só roles autorizadas usam as chaves KMS. |
+| Data Protection | Secrets Management | Credenciais do banco ficam no Secrets Manager. |
+| Audit & Compliance | Identity & Access | CloudTrail e trilha registram ações de usuários e roles. |
+| Audit & Compliance | Network Security | CloudTrail registra mudanças em SGs e endpoints. |
+| Audit & Compliance | Data Protection | Pacote auditável depende da integridade das evidências. |
 
 ## 5. Matriz de rastreamento completa
 
 | Requisito | Caso/Cenário | Pacote | Serviço AWS | Controle |
 | -- | -- | -- | -- | -- |
-| RNF-SEG-01 | CA-ARQ-001, CA-ARQ-007 | Network Security | ACM, ALB, API Gateway | TLS 1.2+ obrigatório |
+| RNF-SEG-01 | CA-ARQ-002, CA-ARQ-007 | Network Security | CloudFront, API Gateway, ACM | TLS 1.2+ |
 | RNF-SEG-02 | CA-ARQ-007 | Data Protection | KMS, RDS, DynamoDB, S3 | Criptografia em repouso |
-| RNF-SEG-03 | UC-FUN-001, CA-ARQ-007 | Identity & Access | IAM | MFA + RBAC |
-| RNF-SEG-04 | CA-ARQ-002, CA-ARQ-007 | Identity & Access | IAM Roles/Policies | Menor privilégio |
-| RNF-SEG-05 | CA-ARQ-002, CA-ARQ-007 | Secrets Management | Secrets Manager | Rotação automática |
-| RNF-SEG-06 | UC-FUN-009, CA-ARQ-007 | Audit & Compliance | CloudTrail | Trilha com autor/data/correlação |
-| RNF-SEG-07 | UC-FUN-009, CA-ARQ-007 | Audit & Compliance | CloudTrail, inventário | Base legal, minimização, retenção |
-| RNF-SEG-08 | UC-FUN-003, CA-ARQ-004 | Identity & Access | Credencial de sensor | Rotação/revogação individual |
-| RNF-SEG-09 | UC-FUN-005, CA-ARQ-004 | Network Security | API Gateway, Lambda | Timestamp, nonce, janela de aceitação |
+| RNF-SEG-03 | UC-FUN-001, CA-ARQ-007 | Identity & Access | Cognito | MFA e grupos |
+| RNF-SEG-04 | CA-ARQ-001, CA-ARQ-007 | Identity & Access | IAM | Menor privilégio |
+| RNF-SEG-05 | CA-ARQ-007 | Secrets Management | Secrets Manager | Rotação automática |
+| RNF-SEG-06 | UC-FUN-007, UC-FUN-010 | Audit & Compliance | CloudTrail, DynamoDB, S3 | Trilha com autor/data/correlação |
+| RNF-SEG-07 | UC-FUN-002, CA-ARQ-007 | Audit & Compliance | Inventário de dados | Base legal, minimização, retenção |
+| RNF-SEG-08 | UC-FUN-005, UC-FUN-010 | Data Protection | S3 Object Lock | Hash SHA-256 e imutabilidade |
+| RNF-SEG-09 | UC-FUN-006 | Identity & Access | API Gateway Usage Plans | Credencial por cooperativa |
 
 ## 6. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
-| 1.0 | 22/09/2026 | Em revisão | Versão inicial, derivada de RNF-SEG-01 a 09 e CA-ARQ-007. | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
+| 1.0 | 22/09/2026 | Substituída | Pacotes de segurança para telemetria IoT. | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
+| 2.0 | 01/10/2026 | Em revisão | Pacotes de segurança para rastreabilidade e conformidade EUDR. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

@@ -5,31 +5,34 @@ hide:
 
 # Lavoura Inteligente
 
-**Plataforma de Telemetria Agrícola** — Case 6: AgTech<br>
+**Rastreabilidade Agrícola e Conformidade EUDR** — Case 6: AgTech<br>
 Disciplina IBM8936 · Turma PC_ADS_26.2_8001_II
 
-Sensores IoT distribuídos por lavouras de grande extensão enviam, a cada minuto,
-leituras de umidade do solo, acidez, temperatura e clima. A plataforma recebe essa
-telemetria, avalia os limiares críticos de cada cultura e emite alertas de irrigação
-aos produtores, além de consolidar os dados para os painéis dos agrônomos de campo.
+A Lavoura Inteligente consolida dados de produtores, talhões, fontes ambientais e
+eventos de recebimento para manter um **status de risco atualizado** de cada área. Quando
+um lote chega à cooperativa, a balança consulta um status já calculado e recebe, em
+poucos segundos, uma resposta: **APROVADO**, **REVISÃO** ou **BLOQUEADO** — sempre com
+motivo e evidências.
 
-O projeto reprojeta essa arquitetura sobre serviços gerenciados da AWS, substituindo o
-banco relacional — incapaz de sustentar a concorrência de escrita das séries temporais —
-por um modelo NoSQL de escrita distribuída, dentro de um orçamento de até
-**US$ 1.500,00/mês**.
+> Pergunta central: *"Este lote tem origem rastreável e evidências suficientes para ser
+> aceito sem gerar risco de conformidade?"*
+
+O projeto usa a regulamentação europeia contra desmatamento (EUDR) como motivação de
+negócio e uma arquitetura serverless orientada a eventos na AWS, dentro de um orçamento
+de até **US$ 1.500,00/mês**.
 
 <div class="module-cards grid four-cols">
     <div class="card module-card">
         <div class="card-header">Iniciação</div>
         <div class="card-content">
-            <p class="contributors">Documento de visão, metodologia, pesquisa e protótipo de baixa fidelidade</p>
+            <p class="contributors">Documento de visão e escopo do projeto</p>
             <a href="Iniciacao/" class="button primary-btn">Acessar</a>
         </div>
     </div>
     <div class="card module-card">
         <div class="card-header">Elaboração</div>
         <div class="card-content">
-            <p class="contributors">Requisitos, casos de uso, diagramas e protótipo de alta fidelidade</p>
+            <p class="contributors">Arquitetura, requisitos, casos de uso e modelo de segurança</p>
             <a href="Elaboracao/" class="button primary-btn">Acessar</a>
         </div>
     </div>
@@ -61,11 +64,14 @@ por um modelo NoSQL de escrita distribuída, dentro de um orçamento de até
 
 | Serviço | Papel |
 | -- | -- |
-| Amazon API Gateway | Endpoint HTTPS de entrada da telemetria enviada pelos sensores |
-| AWS Lambda (ingestão) | Validação e sanitização dos payloads antes da gravação |
-| Amazon DynamoDB | Persistência da telemetria, particionada por sensor e ordenada por tempo |
-| DynamoDB Streams + Lambda | Avaliação dos limiares críticos e disparo dos alertas de irrigação |
-| Amazon SNS | Entrega dos alertas aos produtores |
-| Amazon S3 | Arquivos históricos e consolidados de safras passadas |
-| Amazon S3 + CloudFront | Frontend dos painéis, distribuído com HTTPS |
-| Amazon CloudWatch | Logs, métricas de ingestão e alarmes de falha das funções Lambda |
+| Amazon API Gateway | Entrada das APIs do dashboard, da balança e das integrações |
+| Amazon EventBridge | Agendamento das coletas e distribuição de eventos entre componentes |
+| AWS Lambda | Ingestão, validação de polígonos, análise espacial e consulta de status |
+| Amazon DynamoDB | Status atual e eventos recentes por talhão (consulta rápida na balança) |
+| PostgreSQL + PostGIS (RDS) | Polígonos, relacionamentos e operações espaciais |
+| Amazon S3 | Data lake: arquivos brutos, histórico e evidências imutáveis |
+| Amazon Athena | Consultas SQL sobre o histórico no S3 |
+| Amazon SNS | Notificações de mudança de status |
+| Amazon Cognito | Login, MFA e perfis de acesso |
+| CloudFront + S3 | Dashboard web com mapa dos talhões |
+| CloudWatch + CloudTrail | Métricas, logs, alarmes e auditoria |

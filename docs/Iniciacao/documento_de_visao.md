@@ -3,9 +3,9 @@ id: documento_de_visao
 title: Documento de Visão
 ---
 
-# Documento de Visão (v1.1)
+# Documento de Visão (v2.0)
 
-**Projeto**: Lavoura Inteligente — Plataforma de Telemetria Agrícola<br>
+**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Case**: 6 — AgTech<br>
 **Turma**: PC_ADS_26.2_8001_II<br>
 **Fase**: Iniciação<br>
@@ -15,174 +15,206 @@ title: Documento de Visão
 
 Este documento apresenta o problema de negócio, os usuários, o escopo e as metas de
 qualidade da plataforma Lavoura Inteligente. Os detalhes funcionais e os critérios
-mensuráveis são mantidos, respectivamente, no Levantamento de Requisitos e no Documento
-de Requisitos Suplementares.
+mensuráveis estão, respectivamente, no Levantamento de Requisitos e no Documento de
+Requisitos Suplementares. A arquitetura técnica está descrita no Documento de
+Arquitetura.
 
 ### 1.1. Propósito
 
-Definir uma visão comum para uma plataforma capaz de receber telemetria agrícola em
-escala, transformar leituras críticas em alertas e oferecer dados atuais e históricos
-sem que o pico de ingestão prejudique o portal administrativo.
+Definir uma visão comum para uma plataforma que consolida dados de produtores, talhões,
+fontes ambientais e eventos de recebimento, mantém um **status de risco atualizado** para
+cada área e responde, em poucos segundos, se um lote que chega à cooperativa tem origem
+rastreável e evidências suficientes para ser aceito.
 
-### 1.2. Escopo
+A pergunta central do produto é:
+
+> **"Este lote tem origem rastreável e evidências suficientes para ser aceito sem gerar
+> risco de conformidade?"**
+
+### 1.2. Mudança de escopo em relação à v1
+
+A versão 1 tratava o case como telemetria de sensores IoT (umidade, acidez, temperatura)
+com alertas de irrigação. A versão 2 mantém o núcleo técnico pedido pelo Case 6 —
+ingestão em escala, escrita distribuída em NoSQL e visualização — mas o aplica a um
+problema de negócio mais concreto: rastreabilidade de origem e risco socioambiental,
+motivado pela regulamentação europeia EUDR.
+
+### 1.3. Escopo
 
 Estão no escopo:
 
-1. cadastro de fazendas, talhões, culturas, sensores, usuários e limiares;
-2. autenticação e autorização de usuários e sensores;
-3. recepção, validação e persistência de telemetria;
-4. avaliação de limiares e publicação de alertas;
-5. painel de estado e histórico por talhão;
-6. encerramento e relatórios de safra;
-7. arquivamento da telemetria expirada;
-8. infraestrutura AWS, segurança, observabilidade, backup, recuperação e CI/CD.
+1. cadastro de produtores, fazendas, talhões e documentos de origem;
+2. upload, validação e versionamento dos polígonos dos talhões (KML/GeoJSON);
+3. ingestão periódica de fontes ambientais (ex.: MapBiomas Alerta, DETER, camadas
+   derivadas do Sentinel);
+4. análise espacial entre polígonos e camadas ambientais;
+5. cálculo e armazenamento do status de cada talhão: **APROVADO**, **REVISÃO** ou
+   **BLOQUEADO**, sempre com motivo e evidências;
+6. consulta do status no momento da recepção do lote (balança/romaneio);
+7. notificação de mudanças críticas de status;
+8. histórico, consulta analítica e geração de pacote auditável;
+9. infraestrutura AWS, segurança, observabilidade, backup e CI/CD.
 
-Estão fora do escopo desta fase a fabricação e homologação dos sensores, o
-acionamento automático de pivôs de irrigação e a previsão por aprendizado de máquina.
+Estão fora do escopo desta fase: parecer jurídico de conformidade, integração com o
+sistema oficial da União Europeia para envio de declarações, processamento próprio de
+imagens de satélite brutas (usaremos camadas e alertas já processados por fontes
+públicas) e sensores IoT em campo.
 
-### 1.3. Glossário
+### 1.4. Glossário
 
-- **Leitura aceita**: leitura válida cuja persistência durável foi confirmada antes da
-  resposta de sucesso ao sensor.
-- **Alerta publicado**: alerta entregue com sucesso pelo motor de regras ao tópico SNS.
-- **Alerta entregue**: alerta cuja entrega foi confirmada pelo canal, quando o canal
-  oferece essa confirmação.
-- **Talhão**: menor unidade de manejo da lavoura à qual os sensores são associados.
-- **DLQ/destino de falha**: armazenamento durável de eventos que excederam a política de
-  tentativas e precisam de inspeção ou replay.
-- **SLA/SLO/SLI**: acordo, objetivo e indicador de nível de serviço.
-- **RPO/RTO/MTTR**: perda máxima de dados, tempo de recuperação e tempo médio de reparo.
-- **IaC**: infraestrutura como código.
+- **EUDR**: *European Union Deforestation Regulation*, regulamento europeu sobre produtos
+  livres de desmatamento. Abrange gado, cacau, café, óleo de palma, borracha, soja e
+  madeira, além de derivados.
+- **Data de corte**: 31/12/2020. Áreas desmatadas após essa data não podem originar
+  produtos aceitos pela EUDR.
+- **Talhão**: menor unidade de área cadastrada, representada por um polígono.
+- **Lote/romaneio**: carga recebida pela cooperativa, vinculada a um ou mais talhões.
+- **Status**: classificação operacional de risco (APROVADO, REVISÃO, BLOQUEADO). Não é
+  certificação jurídica.
+- **Evidência**: registro versionado que justifica um status (polígono usado, dataset,
+  data, resultado da análise espacial).
+- **Hot data / cold data**: dados de consulta frequente e rápida (DynamoDB) versus dados
+  históricos e volumosos (S3).
+- **PostGIS**: extensão geoespacial do PostgreSQL.
+- **SLA/SLO/SLI, RPO/RTO**: acordo, objetivo e indicador de serviço; perda máxima de dados
+  e tempo máximo de recuperação.
 
-### 1.4. Referências
+### 1.5. Referências
 
+- Comissão Europeia — Regulation on Deforestation-free Products (EUDR).
 - AWS Well-Architected Framework.
 - Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
-- Documentação oficial de Amazon DynamoDB, AWS Lambda, Amazon VPC e Amazon S3.
+- Documentação oficial de Amazon DynamoDB, AWS Lambda, Amazon S3, Amazon Athena,
+  Amazon EventBridge e PostGIS.
 - Plano de Ensino e roteiro do Case 6 — AgTech.
 
 ## 2. Posicionamento
 
 ### 2.1. Problema e oportunidade
 
-O sistema atual concentra dados transacionais e séries temporais em um banco relacional.
-Sob concorrência elevada, essa arquitetura produz contenção, risco de perda de leitura,
-painéis desatualizados e alertas atrasados. A oportunidade é aproveitar os sensores já
-instalados e converter a telemetria em decisão de manejo com uma arquitetura elástica.
+Cooperativas e cerealistas recebem produção de milhares de produtores. Os dados de
+origem chegam em planilhas, KMLs, GeoJSONs, e-mails e sistemas diferentes, muitas vezes
+com erros de geometria. Verificar manualmente cada origem é lento, difícil de auditar e
+inviável no pico da colheita, quando caminhões chegam continuamente à balança.
 
-### 2.2. Posicionamento do produto
+A EUDR passa a exigir, a partir de **30/12/2026** para grandes e médias empresas e
+**30/06/2027** para a maioria das micro e pequenas, que produtos exportados à União
+Europeia comprovem origem livre de desmatamento. Isso cria demanda por rastreabilidade
+geoespacial, histórico e evidências auditáveis.
 
-Para empresas do agronegócio com lavouras conectadas, a **Lavoura Inteligente** é uma
-plataforma de telemetria e alertas que persiste leituras em escala, publica alertas
-críticos em menos de 60 segundos e oferece visão consolidada por talhão. Diferentemente
-da solução atual, a ingestão serverless e o armazenamento de séries temporais permanecem
-isolados da API administrativa.
+> A EUDR é usada neste trabalho como motivação técnica e de negócio, não como
+> aconselhamento jurídico.
+
+### 2.2. Ideia-chave da solução
+
+O sistema **pré-processa** as informações complexas antes da chegada do caminhão. Na
+balança, a aplicação apenas consulta um status já calculado no DynamoDB, em vez de
+executar toda a análise do zero.
+
+### 2.3. Posicionamento do produto
+
+Para cooperativas e cerealistas que precisam comprovar a origem da produção, a
+**Lavoura Inteligente** é uma plataforma de rastreabilidade que cruza polígonos de
+talhões com dados ambientais e entrega uma decisão operacional rastreável em poucos
+segundos. Diferentemente da verificação manual, o status é recalculado automaticamente
+quando chegam novos dados e toda decisão fica acompanhada de evidências versionadas.
 
 ## 3. Stakeholders e usuários
 
 | Perfil | Necessidade primária | Resultado esperado |
 | -- | -- | -- |
-| Agrônomo | Acompanhar solo, clima e alertas por talhão. | Decidir o manejo com dados recentes. |
-| Produtor rural | Receber alertas relevantes. | Agir antes de uma condição crítica causar perdas. |
-| Gestor agrícola | Comparar fazendas e safras. | Obter relatórios consolidados sem afetar a ingestão. |
-| Administrador | Manter cadastros, usuários, sensores e limiares. | Dados íntegros e acessos controlados. |
-| Sensor IoT | Enviar leitura autenticada e identificável. | Confirmação inequívoca de aceitação ou rejeição. |
-| Operação/DevOps | Implantar, observar e recuperar o serviço. | Operação rastreável dentro dos SLOs e do orçamento. |
-| Segurança/CISO | Proteger dados pessoais e comerciais. | Menor privilégio, criptografia e auditoria. |
-| Diretoria/CFO | Controlar o gasto. | Custo total inferior a US$ 1.500 por mês. |
+| Cooperativa / cerealista | Aceitar apenas lotes com origem rastreável. | Menor risco comercial e regulatório. |
+| Operador da balança | Saber rapidamente se pode receber o lote. | Resposta APROVADO/REVISÃO/BLOQUEADO com motivo. |
+| Analista de conformidade / agrônomo | Investigar talhões em revisão. | Evidências claras e histórico por área. |
+| Produtor rural | Cadastrar áreas e entender seu status. | Saber o que corrigir para ser aprovado. |
+| Administrador | Manter usuários, cadastros e integrações. | Dados íntegros e acessos controlados. |
+| Auditor | Verificar decisões passadas. | Pacote de evidências reproduzível. |
+| Fontes ambientais externas | Publicar alertas e camadas. | Dados ingeridos com origem e data registradas. |
+| Operação / DevOps | Implantar e observar o serviço. | Operação rastreável dentro dos SLOs e do orçamento. |
+| Diretoria / CFO | Controlar o gasto. | Custo total inferior a US$ 1.500 por mês. |
 | Corpo docente | Avaliar a solução. | Decisões justificadas e evidências reproduzíveis. |
 
 ## 4. Visão da solução
 
-### 4.1. Fluxo administrativo
+### 4.1. Como o produto funciona para o usuário
 
-O CloudFront distribui os arquivos estáticos do front-end hospedados no S3. O tráfego
-dinâmico segue por HTTPS ao Application Load Balancer em sub-redes públicas. A aplicação
-Django REST Framework roda em pelo menos duas instâncias EC2 privadas, distribuídas em
-duas Zonas de Disponibilidade, e acessa o RDS PostgreSQL Multi-AZ em sub-redes privadas.
+1. O produtor ou a cooperativa cadastra fazendas, talhões e documentos de origem.
+2. O sistema valida e armazena os polígonos geográficos de cada talhão.
+3. Dados externos e alertas ambientais são ingeridos periodicamente.
+4. Um motor de processamento cruza os polígonos com as fontes ambientais.
+5. O sistema atualiza o status de risco de cada talhão e mantém o histórico das
+   evidências.
+6. Quando um lote chega, a aplicação consulta o status pré-calculado e responde em
+   poucos segundos.
+7. Mudanças críticas geram alertas e ficam registradas para auditoria.
 
-### 4.2. Fluxo de telemetria
+### 4.2. Exemplo de decisão na balança
 
-O API Gateway, como serviço regional gerenciado, recebe requisições HTTPS autenticadas e
-invoca a Lambda de ingestão. A função valida o esquema, verifica identidade, timestamp e
-chave de idempotência e grava a leitura no DynamoDB. O sensor recebe sucesso somente
-depois da confirmação dessa gravação; erros de validação retornam 4xx e falhas de
-persistência retornam 5xx para permitir nova tentativa segura.
+| Campo | Valor |
+| -- | -- |
+| Produtor | Fazenda Santa Rita |
+| Talhão | TALHAO_8F23 |
+| Lote | 2026-09-00128 |
+| Status | APROVADO |
+| Motivo | Polígono válido, origem rastreável e nenhuma ocorrência crítica ativa nas fontes processadas. |
 
-### 4.3. Fluxo de alertas
+### 4.3. Arquitetura em uma frase
 
-O DynamoDB Streams invoca uma Lambda que consulta uma projeção dos limiares ativos no
-DynamoDB, evitando acesso ao RDS no caminho crítico. Quando a condição muda de normal
-para crítica, a função cria um alerta idempotente e o publica no SNS. Estado, histerese e
-janela de silêncio evitam alertas repetidos a cada leitura. Falhas usam tentativas
-limitadas, falha parcial por item e destino durável, com procedimento de replay.
-
-### 4.4. Consulta e arquivamento
-
-Além da série por sensor, tabelas ou índices derivados mantêm o estado mais recente e a
-série consultável por `talhao_id + timestamp`. O CloudFront acelera apenas conteúdo
-estático; o desempenho das consultas dinâmicas depende do modelo de acesso e da API.
-
-O TTL remove a telemetria ao fim da janela quente, mas não a transfere automaticamente.
-Eventos de remoção identificados no DynamoDB Streams são processados por uma Lambda de
-arquivamento, que grava os registros no S3 particionados por fazenda, safra e data. O
-processo é idempotente, possui destino de falha durável e reconciliação periódica.
-
-### 4.5. Rede e acesso a serviços AWS
-
-- ALB em duas sub-redes públicas; EC2 e RDS em sub-redes privadas.
-- Gateway Endpoints gratuitos para S3 e DynamoDB, associados às tabelas de rotas.
-- Interface Endpoint para Secrets Manager quando o acesso privado for necessário.
-- Lambda de ingestão fora da VPC enquanto depender apenas de serviços gerenciados
-  acessíveis por API; qualquer associação futura à VPC deve justificar NAT/endpoints.
-- Security Groups permitem somente fluxos entre camadas; NACLs permanecem simples e
-  documentadas, incluindo portas efêmeras.
+API Gateway e EventBridge recebem chamadas e eventos; Lambdas processam; DynamoDB guarda
+o status operacional; S3 guarda o histórico; Athena consulta o data lake; PostgreSQL com
+PostGIS executa as análises geoespaciais; SNS envia alertas; o frontend apresenta mapa,
+status e evidências. Detalhes no Documento de Arquitetura.
 
 ## 5. Capacidades principais
 
-- administração de cadastros e perfis;
-- provisionamento, ativação, rotação e revogação de credenciais de sensores;
-- ingestão idempotente de umidade, acidez, temperatura e clima;
-- painel e série temporal por talhão;
-- alertas com estado, deduplicação e auditoria;
-- relatórios e histórico de safras;
-- observabilidade, backup, restauração e implantação automatizada.
+- cadastro de produtores, fazendas e talhões com polígonos versionados;
+- validação de arquivos geoespaciais (formato, sistema de coordenadas e geometria);
+- ingestão e versionamento de fontes ambientais;
+- análise espacial (interseção, área afetada, distância);
+- status de risco por talhão com motivo e evidências;
+- consulta rápida na recepção do lote;
+- revisão humana de casos duvidosos;
+- notificações de mudança crítica;
+- histórico analítico e pacote auditável;
+- observabilidade, backup e implantação automatizada.
 
 ## 6. Premissas, dependências e restrições
 
-- 5.000 sensores iniciais, uma leitura por minuto e crescimento de 20% no primeiro ano.
-- Carga média aproximada de 83,3 eventos/s e pico de 500 eventos/s durante 30 minutos.
-- Payload de referência de até 4 KiB; cenários diferentes exigem nova medição.
-- Limiares são aprovados pela área agronômica e versionados.
-- A integração meteorológica possui timeout, cache, limite de consumo e contingência.
-- Stack principal: Python, Django REST Framework, IaC e serviços gerenciados AWS.
+- Cenário de referência: **3.000 produtores** e **25.000 talhões**.
+- Picos de movimentação concentrados na colheita; baixo tráfego fora da safra.
+- Fontes ambientais públicas com atualização diária (alertas) a mensal/anual (camadas
+  de cobertura).
+- O status é uma classificação de risco operacional, sempre com revisão humana possível.
+- Stack principal: Python, serverless AWS, PostgreSQL/PostGIS, frontend web (React ou
+  similar) e infraestrutura como código.
 - Equipe de três integrantes e prazo acadêmico de 20 semanas.
-- Orçamento máximo de US$ 1.500 por mês.
-- Dados pessoais e dados operacionais das fazendas são protegidos segundo a LGPD e a
-  política de classificação da informação.
+- Orçamento máximo de **US$ 1.500 por mês**.
+- Dados pessoais de produtores (nome, documento, contato, localização da propriedade)
+  são tratados segundo a LGPD.
 
 ## 7. Metas de qualidade
 
-| Atributo | Meta comum da baseline |
+| Atributo | Meta da baseline |
 | -- | -- |
-| Disponibilidade | 99,95% mensal para API administrativa e endpoint de ingestão, medidos externamente. |
-| Ingestão | p95 entre recebimento e persistência inferior a 80 ms no cenário de referência. |
-| Consulta | p95 da API de histórico recente por talhão inferior a 150 ms; primeira visualização em até 3 s. |
-| Alerta | p95 entre persistência da leitura crítica e publicação no SNS inferior a 60 s. |
-| Durabilidade | Nenhuma leitura aceita é perdida; duplicatas são tratadas por idempotência. |
-| Recuperação | RPO transacional inferior a 15 min e RTO sistêmico inferior a 1 h. |
-| Segurança | TLS 1.2 ou superior; criptografia KMS em repouso; MFA e RBAC administrativos. |
-| Custo | Total mensal inferior a US$ 1.500 e núcleo de ingestão até US$ 4 por milhão de eventos no cenário-base. |
+| Consulta na balança | p95 da API inferior a 500 ms; resposta ao operador em até 3 s. |
+| Atualização de status | Talhões afetados recalculados em até 1 h após a ingestão de um novo dataset. |
+| Disponibilidade | 99,9% mensal para a API de consulta de status. |
+| Rastreabilidade | 100% dos status possuem motivo, versão do polígono, datasets usados e data do cálculo. |
+| Evidências | Evidências preservadas por no mínimo 5 anos, versionadas e protegidas contra alteração. |
+| Recuperação | RPO inferior a 15 min e RTO inferior a 4 h. |
+| Segurança | TLS 1.2+; criptografia KMS em repouso; MFA e controle por perfil. |
+| Custo | Total mensal inferior a US$ 1.500. |
 
-Os métodos de medição, exclusões e critérios completos estão no Documento de
-Requisitos Suplementares.
+Os métodos de medição e os critérios completos estão no Documento de Requisitos
+Suplementares.
 
 ## 8. Aprovação e histórico
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
-| 1.0 | 08/09/2026 | Substituída | Versão inicial. | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
-| 1.1 | 17/09/2026 | Em revisão | Alinhamento de escopo, atores, fluxos AWS, SLOs, durabilidade, alertas e arquivamento. | Equipe do projeto |
+| 1.0 | 08/09/2026 | Substituída | Versão inicial (telemetria IoT). | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
+| 1.1 | 17/09/2026 | Substituída | Alinhamento de escopo, atores, fluxos AWS e SLOs (telemetria IoT). | Equipe do projeto |
+| 2.0 | 01/10/2026 | Em revisão | Mudança de escopo para rastreabilidade agrícola e conformidade EUDR. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

@@ -1,3 +1,112 @@
-from django.test import TestCase
+from decimal import Decimal
 
-# Create your tests here.
+from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from django.db import connection
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from .models import Fazenda, Lote, LoteTalhao, Produtor, StatusRisco, Talhao
+
+
+class BaseDados(APITestCase):
+    def setUp(self):
+        self.produtor = Produtor.objects.create(nome="João", documento="111", municipio="Cristalina", uf="GO")
+        self.fazenda = Fazenda.objects.create(
+            produtor=self.produtor, nome="Santa Rita", municipio="Cristalina", uf="GO", area_ha=Decimal("500"))
+        self.ok = Talhao.objects.create(
+            fazenda=self.fazenda, codigo="T_OK", cultura="soja", area_ha=Decimal("10"),
+            poligono={"type": "Polygon", "coordinates": []},
+            atributos={"bioma": "cerrado", "ndvi": 0.8, "fonte": "MapBiomas"})
+        self.suspeito = Talhao.objects.create(
+            fazenda=self.fazenda, codigo="T_SUSP", cultura="soja", area_ha=Decimal("10"),
+            status=StatusRisco.REVISAO, atributos={"bioma": "cerrado", "ndvi": 0.4, "fonte": "DETER"})
+        self.bloqueado = Talhao.objects.create(
+            fazenda=self.fazenda, codigo="T_BLOQ", cultura="cacau", area_ha=Decimal("10"),
+            status=StatusRisco.BLOQUEADO, atributos={"bioma": "amazonia", "ndvi": 0.2, "fonte": "DETER"})
+
+
+class RelacionalTests(BaseDados):
+    def test_crud_e_serializer_aninhado(self):
+        resp = self.client.post("/api/produtores/", {"nome": "Maria", "documento": "222",
+                                                      "municipio": "Altamira", "uf": "PA"}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        resp = self.client.get(f"/api/produtores/{self.produtor.id}/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        talhoes = resp.data["fazendas"][0]["talhoes"]
+        self.assertEqual({t["codigo"] for t in talhoes}, {"T_OK", "T_SUSP", "T_BLOQ"})
+
+    def test_relacionamentos(self):
+        lote = Lote.objects.create(codigo="L1", peso_total_kg=Decimal("5"))
+        LoteTalhao.objects.create(lote=lote, talhao=self.ok, peso_kg=Decimal("5"))
+        self.assertEqual(list(lote.talhoes.all()), [self.ok])
+        self.assertEqual(self.ok.fazenda.produtor, self.produtor)
+
+
+class DocumentoJsonbTests(BaseDados):
+    def test_filtro_por_chave_json(self):
+        resp = self.client.get("/api/talhoes/?atributos__bioma=cerrado")
+        self.assertEqual({t["codigo"] for t in resp.data}, {"T_OK", "T_SUSP"})
+        resp = self.client.get("/api/talhoes/?atributos__ndvi__gte=0.5")
+        self.assertEqual([t["codigo"] for t in resp.data], ["T_OK"])
+        resp = self.client.get('/api/talhoes/?atributos__contains={"fonte": "DETER"}')
+        self.assertEqual({t["codigo"] for t in resp.data}, {"T_SUSP", "T_BLOQ"})
+
+    def test_chave_json_inexistente_retorna_lista_vazia(self):
+        resp = self.client.get("/api/talhoes/?atributos__certificacao=Rainforest")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data, [])
+
+    def test_indice_gin_criado_pela_migration(self):
+        with connection.cursor() as cur:
+            cur.execute("SELECT indexdef FROM pg_indexes WHERE indexname = 'talhao_atributos_gin'")
+            linha = cur.fetchone()
+        self.assertIsNotNone(linha)
+        self.assertIn("USING gin", linha[0])
+
+
+class TransacaoTests(BaseDados):
+    url = "/api/lotes/receber/"
+
+    def test_recebimento_grava_lote_e_itens(self):
+        resp = self.client.post(self.url, {"codigo": "L-OK", "peso_total_kg": "300.00", "itens": [
+            {"talhao": self.ok.id, "peso_kg": "200.00"},
+            {"talhao": self.suspeito.id, "peso_kg": "100.00"}]}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data["status"], StatusRisco.REVISAO)
+        self.assertEqual(LoteTalhao.objects.filter(lote__codigo="L-OK").count(), 2)
+
+    def test_lote_assume_pior_status_bloqueado(self):
+        resp = self.client.post(self.url, {"codigo": "L-BLOQ", "peso_total_kg": "300.00", "itens": [
+            {"talhao": self.ok.id, "peso_kg": "200.00"},
+            {"talhao": self.bloqueado.id, "peso_kg": "100.00"}]}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data["status"], StatusRisco.BLOQUEADO)
+        self.assertIn("T_BLOQ", resp.data["motivo"])
+
+    def test_soma_de_pesos_divergente_faz_rollback(self):
+        resp = self.client.post(self.url, {"codigo": "L-PESO", "peso_total_kg": "999.00", "itens": [
+            {"talhao": self.ok.id, "peso_kg": "200.00"}]}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+        self.assertFalse(Lote.objects.filter(codigo="L-PESO").exists())
+        self.assertEqual(LoteTalhao.objects.count(), 0)
+
+    def test_talhao_repetido_faz_rollback(self):
+        resp = self.client.post(self.url, {"codigo": "L-REP", "peso_total_kg": "200.00", "itens": [
+            {"talhao": self.ok.id, "peso_kg": "100.00"},
+            {"talhao": self.ok.id, "peso_kg": "100.00"}]}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(Lote.objects.count(), 0)
+        self.assertEqual(LoteTalhao.objects.count(), 0)
+
+
+class AdminSeedTests(APITestCase):
+    def test_seed_idempotente_e_admin(self):
+        call_command("seed", verbosity=0)
+        call_command("seed", verbosity=0)
+        self.assertEqual(Talhao.objects.count(), 4)
+        self.assertEqual(Lote.objects.count(), 1)
+        get_user_model().objects.create_superuser("admin", "a@a.com", "senha-teste-123")
+        self.client.login(username="admin", password="senha-teste-123")
+        for url in ["/admin/", "/admin/lavouraInteligente/talhao/", "/admin/lavouraInteligente/lote/"]:
+            self.assertEqual(self.client.get(url).status_code, 200, url)

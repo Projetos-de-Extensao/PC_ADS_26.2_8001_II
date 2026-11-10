@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,13 +22,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6*_^c@j87e(0+q@sy5o$+svdef4)!!&h@sd$3+f8x$_i-sy&cb'
+# Configuração por variáveis de ambiente (arquivo .env, fora do Git).
+DEBUG = os.environ.get("DEBUG", "0").lower() in ("1", "true", "yes")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("Defina SECRET_KEY no .env (obrigatória com DEBUG=0).")
+    SECRET_KEY = "dev-only-insecure-key"
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 
 
 # Application definition
@@ -38,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     'rest_framework',
     'lavouraInteligente',
 ]
@@ -78,8 +85,12 @@ WSGI_APPLICATION = 'conifg.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.environ.get("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get("POSTGRES_DB", "lavoura"),
+        'USER': os.environ.get("POSTGRES_USER", "postgres"),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD", ""),
+        'HOST': os.environ.get("POSTGRES_HOST", "db"),
+        'PORT': os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 
@@ -106,9 +117,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
@@ -121,12 +132,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
-
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
 }

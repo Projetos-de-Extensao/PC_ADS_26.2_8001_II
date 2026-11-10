@@ -1,8 +1,120 @@
-from rest_framework import viewsets
-from .models import lavouraInteligente
-from .serializers import lavouraInteligenteSerializer
+import json
+
+from django.core.exceptions import FieldError
+from django.db import transaction
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+
+from .models import Fazenda, Lote, LoteTalhao, Produtor, StatusRisco, Talhao
+from .serializers import (
+    FazendaSerializer,
+    LoteSerializer,
+    LoteTalhaoSerializer,
+    ProdutorSerializer,
+    RecebimentoSerializer,
+    TalhaoSerializer,
+)
 
 
-class lavouraInteligenteViewSet(viewsets.ModelViewSet):
-    queryset = lavouraInteligente.objects.all().order_by("-criada_em")
-    serializer_class = lavouraInteligenteSerializer
+class RegraNegocioError(Exception):
+    pass
+
+
+class ProdutorViewSet(viewsets.ModelViewSet):
+    queryset = Produtor.objects.prefetch_related("fazendas__talhoes")
+    serializer_class = ProdutorSerializer
+
+
+class FazendaViewSet(viewsets.ModelViewSet):
+    queryset = Fazenda.objects.select_related("produtor").prefetch_related("talhoes")
+    serializer_class = FazendaSerializer
+
+
+class TalhaoViewSet(viewsets.ModelViewSet):
+    """CRUD de talhões com filtro por campos do JSON `atributos`.
+
+    Exemplos: ?atributos__bioma=cerrado  |  ?atributos__ndvi__gte=0.5
+              ?atributos__contains={"fonte": "MapBiomas"}  (usa o índice GIN)
+    """
+
+    serializer_class = TalhaoSerializer
+
+    def get_queryset(self):
+        qs = Talhao.objects.select_related("fazenda")
+        params = self.request.query_params
+        try:
+            for chave in params:
+                if not chave.startswith("atributos__"):
+                    continue
+                valor = params[chave]
+                try:
+                    valor = json.loads(valor)
+                except ValueError:
+                    pass
+                qs = qs.filter(**{chave: valor})
+            for campo in ("status", "cultura", "fazenda"):
+                if campo in params:
+                    qs = qs.filter(**{campo: params[campo]})
+        except (FieldError, ValueError, TypeError) as exc:
+            raise ValidationError({"filtro": str(exc)})
+        return qs
+
+
+class LoteTalhaoViewSet(viewsets.ModelViewSet):
+    queryset = LoteTalhao.objects.select_related("lote", "talhao")
+    serializer_class = LoteTalhaoSerializer
+
+
+class LoteViewSet(viewsets.ModelViewSet):
+    queryset = Lote.objects.prefetch_related("itens__talhao")
+    serializer_class = LoteSerializer
+
+    @action(detail=False, methods=["post"])
+    def receber(self, request):
+        """Recepção do lote na balança: grava Lote + itens numa única transação.
+
+        - RN-08 / RF-LOT-03: o lote assume o pior status entre seus talhões
+          (BLOQUEADO > REVISAO > APROVADO); RN-04: talhão sem polígono não é APROVADO.
+        - Integridade: a soma dos pesos dos itens deve ser igual ao peso total e um
+          talhão não pode se repetir no lote. Qualquer violação desfaz toda a gravação.
+        """
+        entrada = RecebimentoSerializer(data=request.data)
+        entrada.is_valid(raise_exception=True)
+        dados = entrada.validated_data
+        try:
+            with transaction.atomic():
+                lote = Lote.objects.create(codigo=dados["codigo"], peso_total_kg=dados["peso_total_kg"])
+                soma = 0
+                vistos = set()
+                piores = {StatusRisco.BLOQUEADO: [], StatusRisco.REVISAO: []}
+                for item in dados["itens"]:
+                    talhao = Talhao.objects.select_for_update().get(pk=item["talhao"].pk)
+                    if talhao.pk in vistos:
+                        raise RegraNegocioError(f"Talhão {talhao.codigo} repetido no mesmo lote.")
+                    vistos.add(talhao.pk)
+                    LoteTalhao.objects.create(lote=lote, talhao=talhao, peso_kg=item["peso_kg"])
+                    soma += item["peso_kg"]
+                    status_efetivo = talhao.status
+                    if status_efetivo == StatusRisco.APROVADO and not talhao.poligono:
+                        status_efetivo = StatusRisco.REVISAO
+                    if status_efetivo in piores:
+                        piores[status_efetivo].append(talhao.codigo)
+                if soma != dados["peso_total_kg"]:
+                    raise RegraNegocioError(
+                        f"Soma dos itens ({soma} kg) diferente do peso total ({dados['peso_total_kg']} kg)."
+                    )
+                if piores[StatusRisco.BLOQUEADO]:
+                    lote.status = StatusRisco.BLOQUEADO
+                    lote.motivo = "Recusar: talhão BLOQUEADO na origem: " + ", ".join(piores[StatusRisco.BLOQUEADO])
+                elif piores[StatusRisco.REVISAO]:
+                    lote.status = StatusRisco.REVISAO
+                    lote.motivo = "Revisão humana: talhão em REVISÃO na origem: " + ", ".join(piores[StatusRisco.REVISAO])
+                else:
+                    lote.status = StatusRisco.APROVADO
+                    lote.motivo = "Origem rastreável e sem ocorrência crítica nos talhões."
+                lote.save()
+        except RegraNegocioError as exc:
+            return Response({"detalhe": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return Response(LoteSerializer(lote).data, status=status.HTTP_201_CREATED)

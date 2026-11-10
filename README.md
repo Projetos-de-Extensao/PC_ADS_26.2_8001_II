@@ -170,16 +170,91 @@ O passo a passo manual está em
 
 ## Evidências do deploy (B8)
 
-Prints em `docs/assets/evidencias/`, gerados na EC2 dentro de `~/PC_ADS_26.2_8001_II/src`:
+Deploy de 10/11/2026 na EC2 **t3.small** (Amazon Linux 2023, us-east-2), commit `eb68283`,
+executado com `scripts/deploy_ec2.sh`. Os comandos abaixo rodam na EC2, dentro de
+`~/PC_ADS_26.2_8001_II/src`.
 
-| Evidência | Comando |
+| Verificação | Resultado |
 | -- | -- |
-| Containers em execução (`db` healthy, sem porta 5432 publicada) | `docker ps` |
-| Logs do deploy (migrations, superusuário, seed, Gunicorn) | `docker compose logs web` |
-| API pelo IP público | navegador em `http://<IP>:8000/api/talhoes/?atributos__bioma=cerrado` |
-| Tabela no Postgres | `docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT codigo, status, atributos FROM \"lavouraInteligente_talhao\";"'` |
-| Persistência | criar um lote, `docker compose down`, `docker compose up -d` e listar `/api/lotes/` |
-| Testes | `docker compose exec web python manage.py test lavouraInteligente` |
+| Containers | `db` (postgres:16) healthy, porta 5432 só interna; `web` publicado em 0.0.0.0:8000 |
+| Testes | 10 testes de `lavouraInteligente` passando |
+| Persistência | lote `DEPLOY-20261110140819` mantido após `docker compose down` e `up -d` |
+| Backup | `cron` diário às 03:00; primeiro dump `src/backups/lavoura_2026-11-10_1408.sql.gz` |
+| Rede | Security Group com entrada apenas TCP 22 e 8000 |
+
+### 1. Containers em execução
+
+```bash
+docker compose ps
+```
+
+![docker compose ps: db healthy e web na porta 8000](docs/assets/evidencias/01-docker-ps.png)
+
+### 2. Logs do deploy
+
+Migrations, criação do superusuário, seed e Gunicorn ouvindo na porta 8000.
+
+```bash
+docker compose logs web --tail 40
+```
+
+![logs do container web](docs/assets/evidencias/02-logs-web.png)
+
+### 3. API pelo IP público
+
+Navegador em <http://18.190.28.86:8000/api/talhoes/?atributos__bioma=cerrado> (filtro por campo JSONB).
+
+![API respondendo pelo IP público](docs/assets/evidencias/03-api-ip-publico.png)
+
+### 4. Django Admin
+
+Navegador em <http://18.190.28.86:8000/admin/lavouraInteligente/talhao/>, logado e com estilo.
+
+![Django Admin com a lista de talhões](docs/assets/evidencias/04-admin.png)
+
+### 5. Tabela no PostgreSQL
+
+```bash
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT codigo, status, atributos FROM \"lavouraInteligente_talhao\";"'
+```
+
+![consulta psql na tabela de talhões](docs/assets/evidencias/05-psql-talhoes.png)
+
+### 6. Persistência
+
+```bash
+curl -s http://localhost:8000/api/lotes/ ; echo
+docker compose down
+docker compose up -d
+sleep 10
+curl -s http://localhost:8000/api/lotes/ ; echo
+```
+
+![lotes antes e depois de down/up](docs/assets/evidencias/06-persistencia.png)
+
+### 7. Testes automatizados
+
+```bash
+docker compose exec web python manage.py test lavouraInteligente
+```
+
+![10 testes passando](docs/assets/evidencias/07-testes.png)
+
+### 8. Security Group
+
+Console da AWS → EC2 → Security Groups → regras de entrada (apenas TCP 22 e 8000).
+
+![regras de entrada do Security Group](docs/assets/evidencias/08-security-group.png)
+
+### 9. Backup agendado
+
+```bash
+crontab -l && ls -la backups/
+```
+
+![cron e arquivos de backup](docs/assets/evidencias/09-backup-cron.png)
+
+O registro completo dos comandos e saídas do deploy fica em `~/evidencias_deploy.txt` na EC2.
 
 ## Documentação
 

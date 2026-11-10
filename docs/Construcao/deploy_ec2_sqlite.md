@@ -1,0 +1,525 @@
+# Deploy Django API em Docker na EC2 (SQLite)
+
+!!! info "Adaptação ao projeto Lavoura Inteligente"
+    Neste repositório o projeto Django fica na pasta `src/` (onde estão `Dockerfile`, `docker-compose.yml` e `manage.py`), o pacote do projeto se chama `conifg` e a API é `http://<IP_PUBLICO_EC2>:8000/api/lavouras/`. Onde o roteiro diz `minha-api`, `config` e `tarefas`, leia `src`, `conifg` e `lavouras`. Na EC2, rode os comandos `docker compose` dentro de `<repositorio>/src`.
+
+
+## Objetivo
+
+Criar a API Django e rodá-la em um container Docker usando SQLite. Este é o ponto de partida: o roteiro seguinte ([Deploy com PostgreSQL](deploy_ec2_postgres.md)) evolui o mesmo projeto para PostgreSQL.
+
+Resultado: endpoint `http://localhost:8000/api/tarefas/` funcionando em container, com dados persistidos em um volume.
+
+## Pré-requisitos
+
+- Windows: Python 3.12+, Docker Desktop (`docker compose version`) e Git
+- Conta no GitHub e um repositório criado para o projeto
+- Instância EC2 (Amazon Linux/Ubuntu) com Docker, Docker Compose e Git instalados, e acesso SSH
+
+## Fluxo de trabalho
+
+| Etapa | Onde | O que fazer |
+|---|---|---|
+| 1. Desenvolver | **Windows** | Partes 1 a 4: criar o projeto, escrever o código, subir o Docker e testar localmente |
+| 2. Versionar | **Windows → GitHub** | Parte 5: `git commit` e `git push` |
+| 3. Sincronizar | **GitHub → EC2** | Parte 6: `git clone`/`git pull` na EC2 |
+| 4. Deploy | **EC2 (Docker)** | Parte 7: `docker compose up -d --build` e teste pelo IP público |
+
+```mermaid
+flowchart LR
+    A[Windows<br/>desenvolve e testa] -->|git push| B[GitHub]
+    B -->|git pull| C[EC2 AWS]
+    C -->|docker compose up| D[Container em execução]
+```
+
+Regra: o código é alterado **somente no Windows**. A EC2 apenas recebe as mudanças via Git e executa o deploy.
+
+---
+
+## Parte 1 - Criar o projeto (Windows)
+
+```bash
+mkdir minha-api && cd minha-api
+python -m venv .venv
+# Windows: .venv\Scripts\activate   |  Linux/Mac: source .venv/bin/activate
+pip install django djangorestframework gunicorn
+pip freeze > requirements.txt
+django-admin startproject config .
+python manage.py startapp tarefas
+```
+
+No Windows, salve o conteúdo abaixo como `criar-projeto.ps1` na pasta onde deseja criar o projeto e execute-o no PowerShell. O script usa diretamente o Python do ambiente virtual, sem precisar ativá-lo:
+
+```powershell
+$ErrorActionPreference = "Stop"
+
+New-Item -ItemType Directory -Force -Path "minha-api" | Out-Null
+Set-Location "minha-api"
+
+python -m venv .venv
+$python = ".\.venv\Scripts\python.exe"
+& $python -m pip install django djangorestframework gunicorn
+& $python -m pip freeze | Set-Content -Encoding ascii requirements.txt
+& ".\.venv\Scripts\django-admin.exe" startproject config .
+& $python manage.py startapp tarefas
+```
+
+Execute com ` .\criar-projeto.ps1` (sem o espaço inicial). Se a política de execução bloquear o script, use `powershell -ExecutionPolicy Bypass -File .\criar-projeto.ps1`.
+
+
+## Parte 2 - Código da API (Windows)
+
+### `config/settings.py`
+
+Registre os apps, aceite requisições externas e deixe o caminho do SQLite configurável (isso facilita a troca por Postgres depois):
+
+```python
+import os
+
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
+
+INSTALLED_APPS = [
+    # ... apps padrão ...
+    "rest_framework",
+    "tarefas",
+]
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.environ.get("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
+    }
+}
+```
+
+### `tarefas/models.py`
+
+```python
+from django.db import models
+
+
+class Tarefa(models.Model):
+    titulo = models.CharField(max_length=200)
+    concluida = models.BooleanField(default=False)
+    criada_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.titulo
+```
+
+### `tarefas/serializers.py` (novo arquivo)
+
+```python
+from rest_framework import serializers
+from .models import Tarefa
+
+
+class TarefaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tarefa
+        fields = "__all__"
+```
+
+### `tarefas/views.py`
+
+```python
+from rest_framework import viewsets
+from .models import Tarefa
+from .serializers import TarefaSerializer
+
+
+class TarefaViewSet(viewsets.ModelViewSet):
+    queryset = Tarefa.objects.all().order_by("-criada_em")
+    serializer_class = TarefaSerializer
+```
+
+### `config/urls.py`
+
+```python
+from django.contrib import admin
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
+from tarefas.views import TarefaViewSet
+
+router = DefaultRouter()
+router.register("tarefas", TarefaViewSet)
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", include(router.urls)),
+]
+```
+
+Gere a migração (será versionada no Git):
+
+```bash
+python manage.py makemigrations tarefas
+```
+
+---
+
+## Parte 3 - Docker (Windows)
+
+### O que é um Dockerfile?
+
+Um Dockerfile é um arquivo de texto com instruções para construir uma imagem Docker. Ele descreve, em etapas, o ambiente e os arquivos necessários para executar a aplicação, como a imagem base, a instalação de dependências e o comando de inicialização. A imagem resultante pode ser usada para criar containers de forma reproduzível.
+
+### `Dockerfile`
+
+```dockerfile
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"]
+```
+
+#### Explicação do Dockerfile
+
+- `FROM python:3.12-slim`: inicia a imagem usando uma versão compacta do Python 3.12.
+- `ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1`: evita a criação de arquivos `.pyc` e envia os logs do Python sem atraso.
+- `WORKDIR /app`: define `/app` como diretório de trabalho dentro do container.
+- `COPY requirements.txt .`: copia o arquivo de dependências para esse diretório.
+- `RUN pip install --no-cache-dir -r requirements.txt`: instala as dependências sem manter o cache do pip na imagem.
+- `COPY . .`: copia o restante do projeto para `/app`.
+- `CMD [...]`: configura o comando executado ao iniciar o container. Ele aplica as migrações e, se isso terminar sem erro, inicia o Gunicorn na porta `8000`. `0.0.0.0` permite conexões de fora do container.
+
+O `migrate` roda ao iniciar, criando o arquivo do SQLite se ele não existir.
+
+### `.dockerignore`
+
+```
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3
+.git/
+```
+
+### `.gitignore`
+
+```
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3
+```
+
+### `docker-compose.yml`
+
+O arquivo `docker-compose.yml` descreve como iniciar e configurar os serviços de uma aplicação com o Docker Compose. Ele reúne em um só lugar informações como a forma de construir a imagem, as portas a publicar, as variáveis de ambiente e os volumes. Dessa forma, o ambiente pode ser iniciado de maneira consistente com um comando, como `docker compose up`.
+
+
+```yaml
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      SQLITE_PATH: /data/db.sqlite3
+    volumes:
+      - sqlitedata:/data
+
+volumes:
+  sqlitedata:
+```
+
+- `services`: declara os serviços da aplicação; aqui, o serviço `web` executa a API.
+- `build: .`: constrói a imagem usando o Dockerfile do diretório atual.
+- `ports`: permite acessar a porta `8000` do container pela porta `8000` do computador.
+- `environment`: informa à aplicação o caminho do banco SQLite.
+- `volumes`: monta o volume persistente `sqlitedata` no diretório `/data` do container.
+
+O volume `sqlitedata` guarda o arquivo `.sqlite3` fora do container; sem ele, os dados seriam perdidos a cada recriação.
+
+---
+
+## Parte 4 - Executar e testar localmente (Windows)
+
+Execute no PowerShell, na pasta `minha-api`, com o Docker Desktop em execução. Só avance para a Parte 5 depois que a API responder corretamente aqui.
+
+```bash
+
+docker compose up -d --build
+docker compose logs -f web
+```
+
+`docker compose logs -f web` exibe os logs do serviço `web` e continua acompanhando novas mensagens (`-f`). Pressione `Ctrl+C` para parar de acompanhar os logs; o container continuará em execução.
+
+`docker compose up -d --build` constrói ou atualiza a imagem da aplicação e inicia os serviços em segundo plano (`-d`).
+
+```bash
+curl http://localhost:8000/api/tarefas/
+curl -X POST http://localhost:8000/api/tarefas/ -H "Content-Type: application/json" -d '{"titulo":"Estudar Docker"}'
+curl http://localhost:8000/api/tarefas/
+```
+
+No PowerShell, use `curl.exe` ou `Invoke-RestMethod`. Também é possível abrir `http://localhost:8000/api/tarefas/` no navegador.
+
+### Testar a persistência
+
+```bash
+docker compose down
+docker compose up -d
+curl http://localhost:8000/api/tarefas/
+```
+
+A tarefa criada deve continuar na lista.
+
+### (Opcional) Admin
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+Acesse `http://localhost:8000/admin/`. Sem arquivos estáticos configurados, o admin aparece sem estilo; isso é esperado neste roteiro inicial.
+
+Ao terminar os testes, pare o ambiente local com `docker compose down`.
+
+---
+
+## Parte 5 - Sincronizar com o GitHub (Windows → GitHub)
+
+No PowerShell, na pasta `minha-api`:
+
+```powershell
+git init
+git add .
+git commit -m "API Django com Docker e SQLite"
+git branch -M main
+git remote add origin https://github.com/<usuario>/<repositorio>.git
+git push -u origin main
+```
+
+Confira no GitHub que `Dockerfile`, `docker-compose.yml`, `requirements.txt`, `manage.py` e `tarefas/migrations/` estão presentes e que `.venv/` e `db.sqlite3` não foram enviados.
+
+Em alterações futuras, repita apenas:
+
+```powershell
+git add .
+git commit -m "descrição da mudança"
+git push
+```
+
+---
+
+## Parte 6 - Sincronizar com a EC2 (GitHub → EC2)
+
+No Security Group da EC2, libere a porta de entrada `22` (SSH) e a `8000` (API, TCP). Conecte-se pelo terminal do Vscode:
+
+ou Terminal do Windows
+```powershell
+ssh -i caminho\chave.pem ec2-user@<IP_PUBLICO_EC2>
+```
+
+Na **EC2** (ec2-user), instale o Git (se ainda não estiver instalado) e obtenha o código:
+
+```bash
+git --version || sudo dnf install -y git
+
+# primeira vez
+git clone https://github.com/<usuario>/<repositorio>.git
+cd <repositorio>
+
+# próximas vezes
+cd <repositorio>
+git pull
+```
+
+Se o repositório for privado, use um Personal Access Token ou uma deploy key.
+
+---
+
+## Parte 7 - Deploy com Docker (EC2)
+
+## I. Instalar e iniciar o Docker
+
+Teste se o Docker já está instalado:    
+```bash
+docker --version
+```
+
+Se **não** estiver instalado (o comando acima retorna `command not found`), execute os comandos a seguir:
+
+```bash
+sudo dnf install -y docker
+sudo systemctl enable --now docker
+```
+
+O DNF instala automaticamente as dependências necessárias.
+
+## II. Permitir que o usuário use Docker sem `sudo`
+
+Na imagem padrão do EC2, o usuário costuma ser `ec2-user`:
+
+```bash
+sudo usermod -aG docker ec2-user
+```
+
+Saia da sessão SSH e entre novamente para aplicar a associação ao grupo.
+Enquanto isso, você pode executar comandos Docker com `sudo`.
+
+> **Atenção:** o grupo `docker` concede privilégios equivalentes aos de root.
+> Adicione somente usuários confiáveis.
+
+## III. Instalar o Docker Compose
+
+O pacote `docker` do repositório do Amazon Linux **não inclui o Compose nem o
+Buildx**. Depois de `sudo dnf install -y docker`, estes comandos falham:
+
+```text
+$ docker compose version
+docker: unknown command: docker compose
+$ docker-compose version
+bash: docker-compose: command not found
+```
+
+Instale o plugin oficial no diretório global de plugins do Docker CLI:
+
+```bash
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64) COMPOSE_ARCH=x86_64 ;;
+  aarch64) COMPOSE_ARCH=aarch64 ;;
+  *) echo "Arquitetura não suportada: $ARCH" >&2; exit 1 ;;
+esac
+
+COMPOSE_VERSION=v5.7.0
+PLUGIN_DIR=/usr/local/lib/docker/cli-plugins
+
+sudo mkdir -p "$PLUGIN_DIR"
+sudo curl -fL \
+  "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${COMPOSE_ARCH}" \
+  -o "$PLUGIN_DIR/docker-compose"
+sudo chmod +x "$PLUGIN_DIR/docker-compose"
+```
+
+O plugin é instalado para todos os usuários e passa a ser usado como
+**`docker compose`** (com espaço). O comando antigo **`docker-compose`** (com
+hífen, Compose v1) **não existe** nessa instalação: use sempre `docker compose`
+neste e nos próximos roteiros. Para atualizar, altere
+`COMPOSE_VERSION` para a versão desejada e repita o download e o `chmod`.
+Consulte as versões publicadas em
+[Docker Compose releases](https://github.com/docker/compose/releases).
+
+## IV. Instalar ou atualizar o Docker Buildx
+
+Sem o Buildx, o `docker compose build`/`up --build` mostra o aviso
+`Docker Compose is configured to build using Bake, but buildx isn't installed`
+(ou `buildx Docker CLI plugin not found: falling back to the classic builder`)
+e usa o construtor clássico; com um Buildx antigo (menor que `0.17`), versões
+recentes do Compose recusam o build com a mensagem
+`compose build requires buildx 0.17 or later`. Em ambos os casos a solução é
+instalar o plugin oficial no mesmo diretório global de plugins do Docker CLI. A versão estável
+mais recente em 6 de novembro de 2026 é `v0.38.2`; consulte
+[Buildx releases](https://github.com/docker/buildx/releases) para verificar
+atualizações antes de repetir estes comandos.
+
+```bash
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64) BUILDX_ARCH=amd64 ;;
+  aarch64) BUILDX_ARCH=arm64 ;;
+  *) echo "Arquitetura não suportada: $ARCH" >&2; exit 1 ;;
+esac
+
+BUILDX_VERSION=v0.38.2
+PLUGIN_DIR=/usr/local/lib/docker/cli-plugins
+
+sudo mkdir -p "$PLUGIN_DIR"
+sudo curl -fL \
+  "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-${BUILDX_ARCH}" \
+  -o "$PLUGIN_DIR/docker-buildx"
+sudo chmod +x "$PLUGIN_DIR/docker-buildx"
+```
+
+## V. Verificar a instalação
+
+Depois de entrar novamente na sessão (ou usando `sudo` antes de entrar no grupo):
+
+```bash
+docker --version
+docker compose version
+docker buildx version
+docker info
+```
+
+Confirme que `docker compose version` mostra `v5.7.0` (ou a versão definida em
+`COMPOSE_VERSION`) e que `docker buildx version` mostra `v0.38.2` ou posterior.
+Se aparecer `permission denied ... docker.sock`, você ainda não reconectou o SSH
+após o `usermod`; use `sudo docker ...` ou saia e entre novamente. Em seguida,
+construa e inicie os serviços:
+
+Agora execute na **EC2** para criar o ambiente Django/SQLite. Na pasta do projeto:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f web
+```
+
+Teste de qualquer máquina (inclusive o Windows):
+
+```powershell
+curl.exe http://<IP_PUBLICO_EC2>:8000/api/tarefas/
+```
+
+Para restringir o acesso, defina `DJANGO_ALLOWED_HOSTS` no Compose (ex.: `<IP_PUBLICO_EC2>`) em vez de usar `*`.
+
+### Ciclo de atualização
+
+1. **Windows**: 
+
+- altere o código, teste com: 
+
+```bash
+docker compose up -d --build
+git push
+```
+
+2. **EC2**: 
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Os dados ficam no volume `sqlitedata` da EC2, separado do volume local do Windows; não use `down -v` na EC2 se quiser preservá-los.
+
+---
+
+## Comandos úteis
+
+| Ação | Comando |
+|---|---|
+| Ver containers | `docker compose ps` |
+| Logs | `docker compose logs -f web` |
+| Shell do Django | `docker compose exec web python manage.py shell` |
+| Parar | `docker compose down` |
+| Parar e **apagar dados** | `docker compose down -v` |
+| Rebuild após mudar código | `docker compose up -d --build` |
+
+## Problemas comuns
+
+- **`docker-compose: command not found`**: o plugin v2 é chamado com espaço, `docker compose`. Não instale o `docker-compose` v1.
+- **`docker: unknown command: docker compose`** (ou `'compose' is not a docker command`): o plugin do Compose não está em `/usr/local/lib/docker/cli-plugins/`; refaça a seção III e confira `ls -l /usr/local/lib/docker/cli-plugins/` (arquivos `docker-compose` e `docker-buildx`, com permissão de execução).
+- **`buildx isn't installed` / `compose build requires buildx 0.17 or later`**: instale ou atualize o Buildx (seção IV).
+- **`Exec format error` ao rodar o plugin**: a arquitetura baixada não é a da instância; confira `uname -m` (`x86_64` ou `aarch64`) e refaça o download.
+- **`permission denied ... /var/run/docker.sock`**: o usuário ainda não está no grupo `docker` na sessão atual; reconecte o SSH ou use `sudo`.
+- **`DisallowedHost`**: defina `DJANGO_ALLOWED_HOSTS` ou mantenha o padrão `*` (somente em desenvolvimento).
+- **`no such table`**: faltou a migração; confira se `tarefas/migrations/` existe e rebuild a imagem.
+- **Dados sumiram**: provavelmente foi usado `docker compose down -v`, que remove o volume.
+- **Porta 8000 ocupada**: troque para `"8001:8000"` no Compose.
+
+## Limitações do SQLite (por que evoluir)
+
+- Um único arquivo: não suporta bem várias instâncias/containers escrevendo ao mesmo tempo.
+- Menos recursos que o PostgreSQL (tipos, extensões, concorrência).
+- Backup e escala dependem de copiar o arquivo.
+
+## Próximo passo
+
+Siga [Deploy com PostgreSQL](deploy_ec2_postgres.md) para trocar o SQLite pelo PostgreSQL em container. A mudança se resume a: ajustar `DATABASES` em `settings.py` para ler as variáveis `POSTGRES_*`, adicionar `psycopg[binary]` ao `requirements.txt` e incluir o serviço `db` no Compose.

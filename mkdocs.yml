@@ -22,6 +22,8 @@ nav:
       - GitHub Workflows: Construcao/github_workflows.md
       - GitHub Projects: Construcao/github_projects.md
       - CodeSpace: Construcao/codespace.md
+      - Deploy EC2 + Docker (SQLite): Construcao/deploy_ec2_sqlite.md
+      - Deploy EC2 + Docker (PostgreSQL): Construcao/deploy_ec2_postgres.md
   - Transição:
       - Index: Transicao/index.md
 
@@ -49,7 +51,11 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:

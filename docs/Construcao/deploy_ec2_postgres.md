@@ -1,8 +1,15 @@
 # Deploy Django API em Docker na EC2 (PostgreSQL)
 
-!!! info "Adaptação ao projeto Lavoura Inteligente"
-    Neste repositório o projeto Django fica em `src/`. Rode os comandos `docker compose` dentro de `<repositorio>/src` e leia `config`/`tarefas` como `conifg`/`lavouras`.
+!!! tip "Deploy do projeto Lavoura Inteligente em um comando"
+    Neste repositório o projeto Django fica em `src/` (pacote `conifg`, app `lavouraInteligente`) e **já está migrado para PostgreSQL**. Na EC2 (Amazon Linux 2023), com a porta 8000 liberada no Security Group, rode:
 
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/Projetos-de-Extensao/PC_ADS_26.2_8001_II/main/scripts/deploy_ec2.sh | bash
+    ```
+
+    O script instala Docker, Git, Compose e Buildx, clona ou atualiza o repositório, cria o `src/.env` com segredos aleatórios (permissão 600) e sobe `web` + `db`. Ele pode ser executado de novo a cada atualização. O backup do banco é feito com `bash scripts/backup_db.sh`.
+
+    O restante desta página é o roteiro 14 da disciplina (genérico, com `config` e `tarefas`), mantido como referência de cada passo. A API do projeto responde em `/api/produtores/`, `/api/fazendas/`, `/api/talhoes/` e `/api/lotes/`.
 
 ## Objetivo
 

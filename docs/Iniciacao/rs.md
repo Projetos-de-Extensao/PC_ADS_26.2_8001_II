@@ -1,9 +1,9 @@
 ---
-id: requisitos_suplementares
+id: rs
 title: Requisitos Suplementares
 ---
 
-# Documento de Requisitos Suplementares (v2.1)
+# Documento de Requisitos Suplementares (v2.2)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
@@ -154,14 +154,64 @@ para continuar reproduzíveis.
 | Operação de drones | Definir equipe (própria ou terceirizada), câmera, prazo de vistoria e formato do ortomosaico. |
 | Estimativa de custo | Validar no AWS Pricing Calculator. |
 
-## 13. Histórico e aprovação
+## 13. Decisão de implantação da Release 1: EC2 + Docker + PostgreSQL
+
+### 13.1. Decisão
+
+| Item | Registro |
+| -- | -- |
+| Contexto | A AP1 rodava em Elastic Beanstalk com SQLite. O cliente pediu para retirar essas dependências, executar em EC2 com Docker Compose (web e db) e persistir em PostgreSQL com segredos fora do Git. |
+| Decisão | A Release 1 roda em **uma instância EC2 t3.small (Amazon Linux 2023, us-east-2)**, com **Docker Compose**: container `web` (Django 6.1 + DRF + Gunicorn + WhiteNoise) e container `db` (**PostgreSQL 16**) com volume nomeado `pgdata`. |
+| Motivos | Mesmo ambiente no Windows e na EC2; PostgreSQL permite o modelo multimodelo (relacional + JSONB com índice GIN); custo de ~US$ 21/mês; prazo da AP2. |
+| Consequências | Ponto único de falha (web e db na mesma instância); backup por `pg_dump` em vez de PITR; patches do SO e do Postgres a cargo da equipe. A evolução prevista é mover o banco para o Amazon RDS. |
+| Referências | [Dimensionamento de Computação](../Elaboracao/dim_comp.md), [Dimensionamento de Banco](../Elaboracao/dimrbd.md), [Estratégias de Deploy](../Transicao/ativ_deploy.md) |
+
+### 13.2. Situação dos requisitos na Release 1
+
+| Requisito | Situação | Como é atendido (ou lacuna) |
+| -- | -- | -- |
+| RNF-PER-01 (p95 < 500 ms) | Atendido no teste local | p95 de 49 ms em `GET /api/talhoes/` no ambiente de teste; repetir na EC2. |
+| RNF-CAP-02 (20 req/s) | A medir | Capacidade estimada de 60–300 req/s com 3 workers (dim_comp.md); teste de carga na EC2 pendente. |
+| RNF-CON-01 (99,9%) | Parcial | Alvo da Release 1: **99%** (instância única, `restart: unless-stopped`); 99,9% exige RDS Multi-AZ e mais de uma instância web. |
+| RNF-CON-03 (RPO < 15 min) | Lacuna | `pg_dump` diário (RPO 24 h). Meta exige WAL contínuo ou PITR do RDS. |
+| RNF-CON-04 (RTO < 4 h) | Atendido | Restore testado em < 30 min; nova EC2 com `deploy_ec2.sh` em < 1 h. |
+| RNF-SEG-01 (HTTPS) | Lacuna | API em HTTP na porta 8000; HTTPS previsto com Nginx + certificado ou ALB. |
+| RNF-SEG-05 (segredos fora do código) | Atendido | `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` e `POSTGRES_*` lidos do `.env` (no `.gitignore`); só o `.env.example` é versionado; `.env` com permissão 600. |
+| Exposição do banco | Atendido | Serviço `db` sem porta publicada; Security Group com apenas 22 (SSH) e 8000 (API). |
+| RNF-OPS-04 (backup automatizado) | Parcial | `scripts/backup_db.sh` + `cron` diário + cópia para o S3. |
+| RNF-MAN-01 (deploy automatizado) | Atendido | `scripts/deploy_ec2.sh` instala dependências, atualiza o código e sobe a stack. |
+| RNF-MAN-02 (rollback < 5 min) | Atendido | `git checkout <commit>` + `docker compose up -d --build` (ativ_deploy.md, seção 7). |
+| RNF-MAN-07 (docs publicáveis) | Atendido | CI executa `mkdocs build --strict`. |
+| RNF-CUS-01 (< US$ 1.500/mês) | Atendido | ~US$ 21/mês na Release 1. |
+
+### 13.3. SLA da Release 1
+
+| Indicador | Compromisso |
+| -- | -- |
+| Disponibilidade da API | 99% ao mês (~7 h de indisponibilidade em 30 dias) |
+| Janela de manutenção | atualizações fora do horário da balança, com aviso prévio |
+| Recuperação | RPO 24 h; RTO 30 min (restore) ou 1 h (instância nova) |
+| Suporte | equipe do projeto, em horário acadêmico |
+
+### 13.4. Riscos da Release 1
+
+| Risco | Impacto | Mitigação |
+| -- | -- | -- |
+| Perda da instância ou do volume EBS | perda de até 24 h de dados | dump diário copiado para o S3; snapshot do EBS antes de mudanças grandes |
+| `docker compose down -v` por engano | apaga o volume `pgdata` | procedimento documentado; backup antes de cada atualização |
+| Memória insuficiente no build | deploy falha | t3.small (2 GiB); swap em t3.micro |
+| Segredo versionado por engano | penalidade e exposição | `.env` no `.gitignore` e no `.dockerignore`; revisão do `git status` antes do commit |
+| Tráfego sem HTTPS | credenciais do admin trafegam em claro | restringir a porta 8000 em produção; Nginx com TLS como próximo passo |
+
+## 14. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
 | 1.0 | 08/09/2026 | Substituída | Versão inicial (telemetria IoT). | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
 | 1.1 | 17/09/2026 | Substituída | SLOs, custo, durabilidade e LGPD (telemetria IoT). | Equipe do projeto |
 | 2.0 | 01/10/2026 | Substituída | Requisitos para rastreabilidade e conformidade EUDR. | Equipe do projeto |
-| 2.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 2.1 | 01/10/2026 | Substituída | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 2.2 | 10/11/2026 | Em revisão | Decisão de implantação EC2 + Docker + PostgreSQL, situação dos RNFs, SLA e riscos da Release 1. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

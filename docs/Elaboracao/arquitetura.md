@@ -3,7 +3,7 @@ id: arquitetura
 title: Documento de Arquitetura
 ---
 
-# Documento de Arquitetura (v1.1)
+# Documento de Arquitetura (v1.2)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
@@ -283,12 +283,44 @@ O valor final deve ser validado na AWS Pricing Calculator com o cenário de refe
 - Notificação via SNS quando o status muda.
 - Upload de um ortomosaico de exemplo (GeoTIFF) e exibição sobre o talhão no mapa.
 
-## 14. Histórico e aprovação
+## 14. Arquitetura implantada na Release 1 (AP2)
+
+Antes da arquitetura serverless acima, a equipe entregou um MVP executável em uma EC2:
+
+```mermaid
+flowchart LR
+    U([Usuários e balança]) -->|HTTP :8000| SG{{Security Group<br/>22 e 8000}}
+    subgraph EC2[EC2 t3.small - Amazon Linux 2023]
+      subgraph Compose[Docker Compose]
+        W[web<br/>Django + DRF + Gunicorn + WhiteNoise]
+        D[(db<br/>PostgreSQL 16)]
+      end
+      V[(volume pgdata)]
+    end
+    SG --> W
+    W -->|rede interna| D
+    D --- V
+    GH[GitHub] -->|git pull| EC2
+```
+
+| Camada da arquitetura-alvo | Na Release 1 |
+| -- | -- |
+| API Gateway + Lambda | Django REST Framework no Gunicorn |
+| DynamoDB (status) | colunas `status` e `motivo` no PostgreSQL |
+| PostgreSQL/PostGIS | PostgreSQL 16; polígono em JSONB (PostGIS na próxima release) |
+| S3 + Athena | fora do escopo; backups do `pg_dump` podem ir para o S3 |
+| EventBridge + SNS | fora do escopo |
+
+Detalhes em [Dimensionamento de Computação](dim_comp.md), [Dimensionamento de Banco](dimrbd.md)
+e [Estratégias de Deploy](../Transicao/ativ_deploy.md).
+
+## 15. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
 | 1.0 | 01/10/2026 | Substituída | Arquitetura para rastreabilidade agrícola e conformidade EUDR. | Equipe do projeto |
-| 1.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 1.1 | 01/10/2026 | Substituída | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 1.2 | 10/11/2026 | Em revisão | Arquitetura implantada na Release 1 (EC2 + Docker + PostgreSQL). | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

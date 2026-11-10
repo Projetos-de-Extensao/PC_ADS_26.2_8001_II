@@ -1,9 +1,9 @@
 ---
-id: modelo_analise_seguranca
+id: maps
 title: Modelo de Análise (Segurança)
 ---
 
-# Modelo de Análise (Pacotes de Segurança) (v2.1)
+# Modelo de Análise (Pacotes e Subsistemas) (v2.2)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
@@ -585,13 +585,99 @@ PacoteAuditavel "1" -- "*" EventoAuditoria : inclui
 | RNF-SEG-09 | UC-FUN-006 | Identity & Access | API Gateway Usage Plans | Credencial por cooperativa |
 | RNF-SEG-10 | UC-FUN-012, CA-ARQ-010 | Identity & Access / Data Protection | S3 presigned URL, KMS | Link temporário e leitura restrita |
 
-## 6. Histórico e aprovação
+## 6. Pacotes e subsistemas da Release 1 (aplicação Django em Docker)
+
+Os pacotes de segurança acima valem para a arquitetura-alvo. Na Release 1 a solução é
+uma aplicação Django em containers, organizada nos pacotes abaixo.
+
+### 6.1. Diagrama de pacotes
+
+```plantuml
+@startuml pacotes_release1
+skinparam packageStyle rectangle
+left to right direction
+
+package "Infraestrutura" as INF {
+  [Dockerfile]
+  [docker-compose.yml]
+  [scripts/deploy_ec2.sh]
+  [scripts/backup_db.sh]
+}
+
+package "Segurança" as SEG {
+  [.env / .env.example]
+  [Security Group 22 e 8000]
+  [settings por variáveis]
+}
+
+package "conifg (projeto Django)" as CFG {
+  [settings.py]
+  [urls.py]
+  [wsgi.py]
+}
+
+package "API (DRF)" as API {
+  [views.py: ViewSets]
+  [serializers.py]
+}
+
+package "lavouraInteligente (app)" as APP {
+  [models.py]
+  [admin.py]
+  [management: bootstrap, seed]
+  [tests.py]
+}
+
+package "Dados (PostgreSQL 16)" as DAT {
+  [tabelas relacionais]
+  [JSONB + índice GIN]
+  [volume pgdata]
+}
+
+API --> APP : usa models
+CFG --> API : rotas /api/
+CFG --> SEG : lê .env
+APP --> DAT : ORM / migrations
+INF --> CFG : executa (Gunicorn)
+INF --> DAT : container db
+INF --> SEG : gera .env (chmod 600)
+@enduml
+```
+
+### 6.2. Descrição e dependências
+
+| Pacote | Responsabilidade | Depende de |
+| -- | -- | -- |
+| `conifg` | configuração do Django, rotas e WSGI | Segurança (variáveis), API |
+| API (`views.py`, `serializers.py`) | CRUD, serializers aninhados, filtro JSON e recepção transacional do lote | `lavouraInteligente.models` |
+| `lavouraInteligente` | models do domínio (Produtor, Fazenda, Talhão, Lote, LoteTalhao), admin, seed, bootstrap e testes | Dados |
+| Dados | tabelas relacionais, JSONB com GIN, volume `pgdata` | Infraestrutura |
+| Infraestrutura | imagem, Compose, deploy e backup na EC2 | Segurança |
+| Segurança | segredos no `.env`, `DEBUG=0` por padrão, `ALLOWED_HOSTS`, banco sem porta publicada, Security Group | — |
+
+Regra de dependência: a API nunca acessa o banco diretamente, só pelos models; nenhum
+pacote lê segredos de arquivo versionado.
+
+### 6.3. Rastreabilidade dos pacotes
+
+| Requisito | Pacote | Componente | Evidência |
+| -- | -- | -- | -- |
+| RF-CAD-01 | lavouraInteligente / API | `Produtor`, `Fazenda`, `Talhao`, ViewSets | `RelacionalTests` |
+| RF-LOT-01 a 03, RN-08 | API | `LoteViewSet.receber` | `TransacaoTests` |
+| A3 (JSONB + GIN) | Dados | migration `0001_initial` (`talhao_atributos_gin`) | `test_indice_gin_criado_pela_migration` |
+| RNF-SEG-05 | Segurança | `settings.py`, `.env.example`, `.gitignore` | `.env` não aparece em `git ls-files` |
+| Banco não exposto | Segurança / Infraestrutura | `docker-compose.yml` (sem `ports` no `db`) | `docker ps` mostra só `5432/tcp` interno |
+| RNF-MAN-01 | Infraestrutura | `scripts/deploy_ec2.sh` | log do deploy (README) |
+| RNF-OPS-04 | Infraestrutura | `scripts/backup_db.sh` | dump e restore testados (dimrbd.md) |
+
+## 7. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
 | 1.0 | 22/09/2026 | Substituída | Pacotes de segurança para telemetria IoT. | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
 | 2.0 | 01/10/2026 | Substituída | Pacotes de segurança para rastreabilidade e conformidade EUDR. | Equipe do projeto |
-| 2.1 | 01/10/2026 | Em revisão | Controles para vistoria por drone (upload, acesso e LGPD). | Equipe do projeto |
+| 2.1 | 01/10/2026 | Substituída | Controles para vistoria por drone (upload, acesso e LGPD). | Equipe do projeto |
+| 2.2 | 10/11/2026 | Em revisão | Pacotes, dependências e rastreabilidade da Release 1 (Django em Docker). | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

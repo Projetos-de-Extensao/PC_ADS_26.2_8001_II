@@ -9,14 +9,17 @@ nav:
   - Home: index.md
   - Iniciação:
       - Index: Iniciacao/index.md
-      - Documento de Visão: Iniciacao/documento_de_visao.md
+      - Documento de Visão: Iniciacao/dv.md
+      - Requisitos Suplementares: Iniciacao/rs.md
   - Elaboração:
       - Index: Elaboracao/index.md
       - Arquitetura: Elaboracao/arquitetura.md
       - Requisitos Funcionais: Elaboracao/levreq.md
-      - Requisitos Suplementares: Elaboracao/requisitos_suplementares.md
-      - Casos de Uso: Elaboracao/casos_de_uso.md
-      - Modelo de Análise (Segurança): Elaboracao/modelo_analise_seguranca.md
+      - Casos de Uso Arquiteturais: Elaboracao/cua.md
+      - Pacotes e Subsistemas: Elaboracao/maps.md
+      - Dimensionamento de Computação (EC2): Elaboracao/dim_comp.md
+      - Dimensionamento de Banco de Dados: Elaboracao/dimrbd.md
+      - Sequência e Comunicação: Elaboracao/seq_com.md
   - Construção:
       - Index: Construcao/index.md
       - GitHub Workflows: Construcao/github_workflows.md
@@ -26,6 +29,7 @@ nav:
       - Deploy EC2 + Docker (PostgreSQL): Construcao/deploy_ec2_postgres.md
   - Transição:
       - Index: Transicao/index.md
+      - Estratégias de Deploy: Transicao/ativ_deploy.md
 
 extra_css:
   - css/extra.css

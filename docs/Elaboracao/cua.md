@@ -1,9 +1,9 @@
 ---
-id: casos_de_uso
+id: cua
 title: Casos de Uso
 ---
 
-# Casos de Uso (v2.1)
+# Casos de Uso (v2.2)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Data**: 01/10/2026<br>
@@ -259,14 +259,54 @@ disparado por eventos (novo polígono ou novo dataset), sem ator humano.
 | Continuidade | — | RNF-CON-01 a 04, RNF-OPS-04/05 | CA-ARQ-008 |
 | Entrega e custo | — | RNF-MAN-01 a 07, RNF-CUS-01 a 05 | CA-ARQ-009 |
 
-## 7. Histórico e aprovação
+## 7. Casos de uso implementados na Release 1
+
+A Release 1 (AP2) implementa os casos de uso arquiteturalmente mais significativos para
+validar o modelo de dados e a decisão na balança.
+
+```mermaid
+flowchart LR
+    Prod([Produtor / Cooperativa]) --> UC2[UC-FUN-002<br/>Gerenciar cadastros]
+    Adm([Administrador]) --> UC1[UC-FUN-001<br/>Autenticar - Django Admin]
+    Adm --> UC2
+    Op([Operador da balança]) --> UC6[UC-FUN-006<br/>Consultar status na balança]
+    An([Analista]) --> UC7[UC-FUN-007<br/>Revisar status]
+    An --> UC9[UC-FUN-009<br/>Consultar talhões por atributo]
+    UC6 -. inclui .-> UC5[UC-FUN-005<br/>Avaliar pior status do lote]
+    UC2 --> API[(API DRF + PostgreSQL)]
+    UC6 --> API
+    UC7 --> API
+    UC9 --> API
+    UC1 --> API
+```
+
+| Caso de uso | Implementação na Release 1 | Endpoint / componente | Teste automatizado |
+| -- | -- | -- | -- |
+| UC-FUN-001 Autenticar e autorizar | Django Admin com superusuário criado pelo `bootstrap` | `/admin/` | `test_seed_idempotente_e_admin` |
+| UC-FUN-002 Gerenciar cadastros | CRUD de produtor, fazenda e talhão com serializers aninhados | `/api/produtores/`, `/api/fazendas/`, `/api/talhoes/` | `test_crud_e_serializer_aninhado`, `test_relacionamentos` |
+| UC-FUN-005 Calcular status de risco | Status do talhão gravado com o cadastro; o lote assume o pior status (RN-08) e talhão sem polígono não é APROVADO (RN-04) | `LoteViewSet.receber` | `test_lote_assume_pior_status_bloqueado` |
+| UC-FUN-006 Consultar status na balança | Recepção do lote em transação única, com rollback por violação de integridade | `POST /api/lotes/receber/` | `test_recebimento_grava_lote_e_itens`, `test_soma_de_pesos_divergente_faz_rollback`, `test_talhao_repetido_faz_rollback` |
+| UC-FUN-007 Revisar status | Alteração do `status` do talhão pela API ou pelo admin | `PATCH /api/talhoes/{id}/` | coberto pelo CRUD |
+| UC-FUN-009 Consultar histórico e mapa | Lista e filtro por atributo JSON (base do mapa) | `GET /api/talhoes/?atributos__...` | `test_filtro_por_chave_json` |
+
+Os demais casos (ingestão ambiental, notificação, pacote auditável e drone) continuam
+especificados acima e dependem da arquitetura-alvo.
+
+### 7.1. Cenário arquitetural da Release 1
+
+| ID | Cenário | Resultado verificável | Requisitos relacionados |
+| -- | -- | -- | -- |
+| CA-ARQ-011 | Implantar a Release 1 em EC2 com Docker Compose | `web` + `db` (PostgreSQL 16) sobem com `docker compose up -d --build`; API no IP público; dados persistem após `down`/`up` | RNF-SEG-05, RNF-MAN-01, RNF-MAN-02, RNF-CON-04 |
+
+## 8. Histórico e aprovação
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
 | 1.0 | 08/09/2026 | Substituída | Casos de provisionamento arquitetural. | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
 | 1.1 | 17/09/2026 | Substituída | Casos funcionais de telemetria IoT. | Equipe do projeto |
 | 2.0 | 01/10/2026 | Substituída | Casos de uso para rastreabilidade e conformidade EUDR. | Equipe do projeto |
-| 2.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 2.1 | 01/10/2026 | Substituída | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 2.2 | 10/11/2026 | Em revisão | Casos de uso implementados na Release 1 (AP2) e cenário CA-ARQ-011. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

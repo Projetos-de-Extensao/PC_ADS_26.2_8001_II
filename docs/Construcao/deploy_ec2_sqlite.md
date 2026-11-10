@@ -1,8 +1,7 @@
 # Deploy Django API em Docker na EC2 (SQLite)
 
-!!! info "Adaptação ao projeto Lavoura Inteligente"
-    Neste repositório o projeto Django fica na pasta `src/` (onde estão `Dockerfile`, `docker-compose.yml` e `manage.py`), o pacote do projeto se chama `conifg` e a API é `http://<IP_PUBLICO_EC2>:8000/api/lavouras/`. Onde o roteiro diz `minha-api`, `config` e `tarefas`, leia `src`, `conifg` e `lavouras`. Na EC2, rode os comandos `docker compose` dentro de `<repositorio>/src`.
-
+!!! warning "Roteiro histórico (SQLite)"
+    Este é o roteiro 13, que levou a API à EC2 ainda com SQLite. **O projeto já migrou para PostgreSQL**: para o deploy atual use o [Deploy com PostgreSQL](deploy_ec2_postgres.md) ou o script `scripts/deploy_ec2.sh`. As seções de instalação do Docker, do Compose e do Buildx (Parte 7, I a V) continuam valendo.
 
 ## Objetivo
 

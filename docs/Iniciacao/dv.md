@@ -1,9 +1,9 @@
 ---
-id: documento_de_visao
+id: dv
 title: Documento de Visão
 ---
 
-# Documento de Visão (v2.1)
+# Documento de Visão (v2.2)
 
 **Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Case**: 6 — AgTech<br>
@@ -233,14 +233,35 @@ status e evidências. Detalhes no Documento de Arquitetura.
 Os métodos de medição e os critérios completos estão no Documento de Requisitos
 Suplementares.
 
-## 8. Aprovação e histórico
+## 8. Release 1 (AP2): MVP implantado
+
+A primeira entrega executável da plataforma é uma **API Django REST com PostgreSQL**,
+implantada em **EC2 com Docker Compose**. Ela substitui o protótipo da AP1 (SQLite no
+Elastic Beanstalk) e valida o núcleo do produto antes da arquitetura serverless descrita
+no Documento de Arquitetura.
+
+| Capacidade da visão | Na Release 1 |
+| -- | -- |
+| Cadastro de produtores, fazendas e talhões | CRUD em `/api/produtores/`, `/api/fazendas/` e `/api/talhoes/`, com serializers aninhados e Django Admin |
+| Polígono e atributos ambientais do talhão | `poligono` (GeoJSON) e `atributos` (bioma, NDVI, alertas, fonte) em JSONB com índice GIN |
+| Status APROVADO, REVISÃO ou BLOQUEADO | campo `status` do talhão e do lote, sempre com `motivo` |
+| Consulta na balança | `POST /api/lotes/receber/`: grava o lote numa transação e devolve o pior status dos talhões de origem (RN-08) |
+| Consulta por atributo ambiental | filtro `?atributos__chave=valor` (ex.: `?atributos__fonte=DETER`) |
+| Ingestão ambiental, drone, SNS, Athena, DynamoDB | **fora da Release 1**: permanecem na arquitetura-alvo |
+
+A decisão de usar EC2 + Docker + PostgreSQL e seus impactos nos requisitos não funcionais
+estão no [Documento de Requisitos Suplementares](rs.md), seção 13, e em
+[Estratégias de Deploy](../Transicao/ativ_deploy.md).
+
+## 9. Aprovação e histórico
 
 | Versão | Data | Status | Descrição | Autor(es) |
 | -- | -- | -- | -- | -- |
 | 1.0 | 08/09/2026 | Substituída | Versão inicial (telemetria IoT). | Joao Vitor Donda, Caique Rechuan e Joao Gabriel Meirelles |
 | 1.1 | 17/09/2026 | Substituída | Alinhamento de escopo, atores, fluxos AWS e SLOs (telemetria IoT). | Equipe do projeto |
 | 2.0 | 01/10/2026 | Substituída | Mudança de escopo para rastreabilidade agrícola e conformidade EUDR. | Equipe do projeto |
-| 2.1 | 01/10/2026 | Em revisão | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 2.1 | 01/10/2026 | Substituída | Inclusão da vistoria e do mapeamento de talhões por drone. | Equipe do projeto |
+| 2.2 | 10/11/2026 | Em revisão | Release 1 (AP2): MVP em EC2 + Docker + PostgreSQL. | Equipe do projeto |
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |

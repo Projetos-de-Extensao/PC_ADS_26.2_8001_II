@@ -12,50 +12,185 @@
 | Caique Rechuan |
 | Joao Gabriel Meirelles |
 
+## Links
+
+| O quê | Endereço |
+| -- | -- |
+| API publicada (EC2) | <http://18.190.28.86:8000/api/> |
+| Django Admin | <http://18.190.28.86:8000/admin/> |
+| Documentação (MkDocs) | <https://projetos-de-extensao.github.io/PC_ADS_26.2_8001_II/> |
+
+> Se a instância for parada e iniciada sem Elastic IP, o IP muda: atualize esta tabela.
+
 ## Sobre
 
 A Lavoura Inteligente é uma plataforma de rastreabilidade agrícola. Ela consolida dados
 de produtores, talhões, fontes ambientais (MapBiomas, DETER, Sentinel) e eventos de
-recebimento, cruza os polígonos das áreas com essas fontes e mantém um status de risco
-atualizado para cada talhão.
+recebimento e mantém um status de risco atualizado para cada talhão.
 
-Quando um lote chega à cooperativa, a balança consulta o status já calculado e recebe,
-em poucos segundos, **APROVADO**, **REVISÃO** ou **BLOQUEADO**, com motivo e evidências
-versionadas. Quando o satélite deixa dúvida, um drone vistoria o talhão de perto e as
-imagens viram evidência para a decisão do analista. A regulamentação europeia contra
-desmatamento (EUDR) é usada como motivação de negócio, não como aconselhamento jurídico.
+Quando um lote chega à cooperativa, a balança recebe **APROVADO**, **REVISÃO** ou
+**BLOQUEADO**, com o motivo. A regulamentação europeia contra desmatamento (EUDR) é usada
+como motivação de negócio, não como aconselhamento jurídico.
 
-O projeto é acadêmico e demonstra o uso integrado de serviços AWS com um limite de
-**US$ 1.500 por mês**.
+## Arquitetura da solução (Release 1 — AP2)
 
-## Documentação principal
+```mermaid
+flowchart LR
+    U([Usuários, balança e admin]) -->|HTTP :8000| SG{{Security Group<br/>22 SSH e 8000 API}}
+    subgraph EC2[EC2 t3.small - Amazon Linux 2023]
+      subgraph Compose[Docker Compose]
+        W[web<br/>Django 6.1 + DRF<br/>Gunicorn + WhiteNoise]
+        D[(db<br/>PostgreSQL 16)]
+      end
+      V[(volume pgdata)]
+      E[[src/.env<br/>fora do Git]]
+    end
+    SG --> W
+    W -->|rede interna 5432| D
+    D --- V
+    E -.-> W
+    Dev([Windows]) -->|git push| GH[GitHub]
+    GH -->|git pull / deploy_ec2.sh| EC2
+    GH -->|CI mkdocs --strict| Pages[GitHub Pages]
+```
 
-- [Documento de Visão](docs/Iniciacao/documento_de_visao.md)
-- [Documento de Arquitetura](docs/Elaboracao/arquitetura.md)
-- [Levantamento de Requisitos Funcionais](docs/Elaboracao/levreq.md)
-- [Requisitos Suplementares](docs/Elaboracao/requisitos_suplementares.md)
-- [Casos de Uso](docs/Elaboracao/casos_de_uso.md)
-- [Modelo de Análise (Segurança)](docs/Elaboracao/modelo_analise_seguranca.md)
+### Modelo de dados multimodelo (PostgreSQL)
 
-## Arquitetura resumida
+```mermaid
+erDiagram
+    PRODUTOR ||--o{ FAZENDA : possui
+    FAZENDA ||--o{ TALHAO : contem
+    LOTE ||--o{ LOTE_TALHAO : itens
+    TALHAO ||--o{ LOTE_TALHAO : origem
+    PRODUTOR {
+        string nome
+        string documento
+        string municipio
+        string uf
+    }
+    FAZENDA {
+        string nome
+        string car_codigo
+        decimal area_ha
+    }
+    TALHAO {
+        string codigo
+        string cultura
+        decimal area_ha
+        jsonb poligono
+        jsonb atributos
+        string status
+    }
+    LOTE {
+        string codigo
+        decimal peso_total_kg
+        string status
+        text motivo
+    }
+    LOTE_TALHAO {
+        decimal peso_kg
+    }
+```
 
-| Necessidade | Serviço principal | Motivo |
+- **Relacional (ACID)**: Produtor → Fazenda → Talhão (FK) e Lote ↔ Talhão (ManyToMany com
+  a tabela associativa `LoteTalhao`, que guarda o peso de cada origem).
+- **Documento (JSONB)**: `Talhao.atributos` (bioma, NDVI, alertas, fonte, certificação),
+  com **índice GIN** criado por migration, e `Talhao.poligono` (GeoJSON).
+- **Transação**: `POST /api/lotes/receber/` grava o lote e os itens em
+  `transaction.atomic()`. O lote assume o pior status dos talhões (RN-08), e uma soma de
+  pesos divergente ou um talhão repetido desfaz tudo (409).
+
+A arquitetura-alvo serverless (API Gateway, Lambda, DynamoDB, S3, Athena, EventBridge, SNS)
+está no [Documento de Arquitetura](docs/Elaboracao/arquitetura.md).
+
+## API
+
+| Recurso | Endpoint | Observação |
 | -- | -- | -- |
-| Receber APIs | API Gateway | Entrada segura e gerenciada. |
-| Executar lógica | Lambda | Serverless e orientado a eventos. |
-| Status rápido | DynamoDB | Baixa latência na consulta da balança. |
-| Arquivos e histórico | S3 | Data lake barato e escalável; recebe as imagens dos drones. |
-| SQL histórico | Athena | Consulta direta no S3. |
-| Eventos | EventBridge | Desacoplamento e agendamento. |
-| Alertas | SNS | Notificações de mudança de status. |
-| Geoespacial | PostgreSQL + PostGIS | Interseções, índices e relacionamentos espaciais. |
-| Observabilidade | CloudWatch + CloudTrail | Métricas, logs e auditoria. |
-| Interface | CloudFront + S3 | Dashboard com mapa e status. |
+| Produtores | `/api/produtores/` | CRUD; mostra fazendas e talhões aninhados |
+| Fazendas | `/api/fazendas/` | CRUD; mostra talhões aninhados |
+| Talhões | `/api/talhoes/` | CRUD; filtros `?atributos__chave=valor`, `?status=`, `?cultura=` |
+| Lotes | `/api/lotes/` | CRUD e `POST /api/lotes/receber/` (transacional) |
+| Itens do lote | `/api/lote-itens/` | CRUD da tabela associativa |
 
-O sistema pré-processa os dados complexos: a análise espacial roda quando chega um novo
-polígono ou dataset, e a balança apenas lê o status pronto no DynamoDB.
+Exemplos:
 
-## Documentação local
+```bash
+curl "http://localhost:8000/api/talhoes/?atributos__bioma=cerrado"
+curl "http://localhost:8000/api/talhoes/?atributos__ndvi__lt=0.5"
+curl -G "http://localhost:8000/api/talhoes/" --data-urlencode 'atributos__contains={"fonte": "DETER"}'
+curl -X POST http://localhost:8000/api/lotes/receber/ -H "Content-Type: application/json" \
+  -d '{"codigo": "2026-11-0001", "peso_total_kg": "300.00", "itens": [{"talhao": 1, "peso_kg": "200.00"}, {"talhao": 3, "peso_kg": "100.00"}]}'
+```
+
+## Execução local (Windows)
+
+Pré-requisitos: Docker Desktop e Git.
+
+```powershell
+cd src
+copy .env.example .env
+```
+
+Edite o `src\.env` (troque `SECRET_KEY` e as senhas; para testar localmente use
+`ALLOWED_HOSTS=localhost,127.0.0.1`). Depois:
+
+```powershell
+docker compose up -d --build
+docker compose exec web python manage.py test lavouraInteligente
+```
+
+A API fica em <http://localhost:8000/api/> e o admin em <http://localhost:8000/admin/>,
+com o usuário e a senha definidos no `.env`. Com `SEED=1`, os dados de exemplo são
+carregados ao subir.
+
+## Deploy na EC2 (Amazon Linux 2023)
+
+1. Crie a instância (t3.small recomendada) e um Security Group com entrada **TCP 22**
+   (seu IP) e **TCP 8000** (0.0.0.0/0). **Não** libere a 5432.
+2. Conecte por SSH e rode:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Projetos-de-Extensao/PC_ADS_26.2_8001_II/main/scripts/deploy_ec2.sh | bash
+```
+
+O script instala Docker, Git, Compose e Buildx, clona ou atualiza o repositório, cria o
+`src/.env` com segredos aleatórios (e mostra a senha do admin) e sobe `web` + `db`.
+
+**Atualizar** depois de um `git push` no Windows: rode o mesmo comando, ou
+`bash ~/PC_ADS_26.2_8001_II/scripts/deploy_ec2.sh`.
+
+**Backup**: `bash ~/PC_ADS_26.2_8001_II/scripts/backup_db.sh` (gera
+`src/backups/*.sql.gz` com `pg_dump`). Restauração em
+[dimrbd.md](docs/Elaboracao/dimrbd.md) (seção 5.2).
+
+O passo a passo manual está em
+[Deploy EC2 + Docker (PostgreSQL)](docs/Construcao/deploy_ec2_postgres.md), e o rollback em
+[Estratégias de Deploy](docs/Transicao/ativ_deploy.md#7-plano-de-rollback).
+
+## Evidências do deploy (B8)
+
+Prints em `docs/assets/evidencias/`, gerados na EC2 dentro de `~/PC_ADS_26.2_8001_II/src`:
+
+| Evidência | Comando |
+| -- | -- |
+| Containers em execução (`db` healthy, sem porta 5432 publicada) | `docker ps` |
+| Logs do deploy (migrations, superusuário, seed, Gunicorn) | `docker compose logs web` |
+| API pelo IP público | navegador em `http://<IP>:8000/api/talhoes/?atributos__bioma=cerrado` |
+| Tabela no Postgres | `docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT codigo, status, atributos FROM \"lavouraInteligente_talhao\";"'` |
+| Persistência | criar um lote, `docker compose down`, `docker compose up -d` e listar `/api/lotes/` |
+| Testes | `docker compose exec web python manage.py test lavouraInteligente` |
+
+## Documentação
+
+| Fase | Documentos |
+| -- | -- |
+| Iniciação | [Documento de Visão](docs/Iniciacao/dv.md) · [Requisitos Suplementares](docs/Iniciacao/rs.md) |
+| Elaboração | [Arquitetura](docs/Elaboracao/arquitetura.md) · [Requisitos Funcionais](docs/Elaboracao/levreq.md) · [Casos de Uso Arquiteturais](docs/Elaboracao/cua.md) · [Pacotes e Subsistemas](docs/Elaboracao/maps.md) · [Dimensionamento EC2](docs/Elaboracao/dim_comp.md) · [Dimensionamento do Banco](docs/Elaboracao/dimrbd.md) · [Sequência e Comunicação](docs/Elaboracao/seq_com.md) |
+| Construção | [Deploy EC2 (SQLite)](docs/Construcao/deploy_ec2_sqlite.md) · [Deploy EC2 (PostgreSQL)](docs/Construcao/deploy_ec2_postgres.md) |
+| Transição | [Estratégias de Deploy](docs/Transicao/ativ_deploy.md) |
+
+Documentação local:
 
 ```bash
 pip install -r requirements.txt

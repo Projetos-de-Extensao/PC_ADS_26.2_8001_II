@@ -107,7 +107,7 @@ As metas de 25 mil talhões, RPO/RTO e SLA da arquitetura exigem validação pr�
 
 ## Custos
 
-O responsável informou US$90 de créditos e autorizou criar esta pilha em 11/11/2026.
+O responsável autorizou criar esta pilha em 11/11/2026.
 Para poucos usuários, poucos talhões e arquivos pequenos até sábado 14/11, a estimativa
 preliminar é US$3–10, incluindo a EC2 atual. Não é teto nem fatura: depende de outras
 cargas da conta, elegibilidade dos créditos, tráfego e armazenamento/versionamento.
@@ -137,9 +137,10 @@ extrair credenciais. PostgreSQL foi preservado e as migrations foram aplicadas.
   restaurada em banco separado: 2 produtores, 4 talhões, 4 análises e 18 entregas.
   O banco temporário foi removido após validação; o banco ativo foi preservado.
 - Cron original `0 3 * * *` mantido; exportação recorrente ao S3 desativada.
-- 36 testes passaram na EC2/PostgreSQL 16 na implantação inicial. A proteção final
-  contra validade vencida, polígono alterado e origem bloqueada ampliou a suíte para
-  40 testes no Windows/PostgreSQL 18; a validação da revisão final está nas evidências.
+- 40 testes passaram no Windows/PostgreSQL 18 e na EC2/PostgreSQL 16; nenhuma migration
+  pendente. Aplicação e documentação passaram no GitHub Actions; GitHub Pages publicado.
+  O [registro final da EC2](../assets/evidencias/20-release-final-ec2.log) contém o commit
+  executado, os testes, os containers e as respostas HTTP.
 
 As consultas às quatro áreas de demonstração não encontraram alerta DETER no envelope.
 Por isso três áreas ficaram em revisão por cobertura incompleta; o bloqueio anterior

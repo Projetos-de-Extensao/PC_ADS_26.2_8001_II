@@ -35,7 +35,7 @@ with sync_playwright() as playwright:
             {'id':'raizes_diagrama_'+str(index),'code':source.read_text(encoding='utf-8')})
         source.with_suffix('.svg').write_text(svg,encoding='utf-8')
     browser.close()
-digest=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+digest=lambda path:hashlib.sha256(path.read_bytes().replace(b'\r\n',b'\n')).hexdigest()
 manifest={p.name:{'source':digest(p),'svg':digest(p.with_suffix('.svg'))} for p in sources}
 (directory/'mermaid-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
 print(f'{len(sources)} diagramas Mermaid renderizados localmente.')

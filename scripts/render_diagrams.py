@@ -19,7 +19,7 @@ parser.add_argument('--jar',type=Path)
 args=parser.parse_args()
 sources=sorted(directory.glob('*.puml'))
 assert sources,'Nenhuma fonte PlantUML encontrada.'
-def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def digest(path): return hashlib.sha256(path.read_bytes().replace(b'\r\n',b'\n')).hexdigest()
 if args.check:
     manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
     assert set(manifest)=={p.name for p in sources},'Manifesto de diagramas incompleto.'

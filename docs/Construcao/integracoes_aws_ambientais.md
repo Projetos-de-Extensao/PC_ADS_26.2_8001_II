@@ -53,6 +53,9 @@ RAIZES_SNS_TOPIC_ARN=arn:aws:sns:us-east-2:CONTA:raizes-alertas
 O perfil da pilha deve ser vinculado à instância. Para containers em bridge, verificar
 se IMDSv2 pode ser acessado com o limite de saltos apropriado; manter tokens obrigatórios.
 O código usa a cadeia padrão de credenciais do SDK e não persiste tokens temporários.
+`RAIZES_BACKUP_S3_ENABLED=0` mantém o cron com backups somente locais. Após autorização
+específica, `bash scripts/backup_db.sh --s3-once` faz apenas uma cópia para o S3,
+sem ativar cópias recorrentes. O responsável autorizou somente uma cópia nesta sessão.
 
 ## Operação e verificação
 

@@ -13,6 +13,7 @@ echo "Backup gerado: src/$ARQUIVO ($(du -h "$ARQUIVO" | cut -f1))"
 # Envia para o bucket privado quando configurado, usando a função IAM da EC2.
 BUCKET=$(sed -n 's/^RAIZES_S3_BUCKET=//p' .env | tail -1 | tr -d '\r')
 ENVIAR_S3=$(sed -n 's/^RAIZES_BACKUP_S3_ENABLED=//p' .env | tail -1 | tr -d '\r')
+if [ "${1:-}" = "--s3-once" ]; then ENVIAR_S3=1; fi
 if [ "$ENVIAR_S3" = "1" ] && [ -n "$BUCKET" ]; then
   aws s3 cp "$ARQUIVO" "s3://$BUCKET/backups/postgres/$(basename "$ARQUIVO")" --sse AES256 --only-show-errors
   echo "Backup PostgreSQL enviado ao S3 privado."

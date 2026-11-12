@@ -1,0 +1,7 @@
+S3_BACKUP_BYTES_MATCH
+ produtores | talhoes | analises | entregas 
+------------+---------+----------+----------
+          2 |       4 |        4 |       18
+(1 row)
+
+RESTORE_ISOLATED_OK

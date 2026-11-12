@@ -175,6 +175,11 @@ def decidir(request,pk):
         return JsonResponse({'detalhe':'Um lote em revisão ou bloqueado não pode ser aceito sem regularização das origens.'},status=409)
     if acao=='ACEITAR' and not lote.itens.exists():
         return JsonResponse({'detalhe':'Vincule os talhões de origem antes de aceitar o recebimento.'},status=409)
+    if acao=='ACEITAR':
+        from .risco import status_efetivo
+        origins=Talhao.objects.select_for_update().filter(entregas__lote=lote).order_by('pk')
+        if any(status_efetivo(t)!='APROVADO' for t in origins):
+            return JsonResponse({'detalhe':'Uma origem mudou de risco, está vencida ou possui geometria inválida. Reavalie os talhões antes de aceitar.'},status=409)
     if DecisaoRecebimento.objects.filter(lote=lote).exists():
         return JsonResponse({'detalhe':'A decisão deste lote já foi registrada e preservada para auditoria.'},status=409)
     decisao=DecisaoRecebimento.objects.create(lote=lote,operador=request.user,acao=acao,

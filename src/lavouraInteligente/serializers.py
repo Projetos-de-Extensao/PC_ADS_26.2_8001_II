@@ -18,6 +18,9 @@ class TalhaoSerializer(serializers.ModelSerializer):
     def validate_atributos(self,value):
         if not isinstance(value,dict):
             raise serializers.ValidationError('Os atributos devem ser um objeto JSON.')
+        previous=self.instance.atributos.get('analise_ambiental') if self.instance else None
+        if value.get('analise_ambiental')!=previous:
+            raise serializers.ValidationError('A análise ambiental é gerenciada pelo sistema; use a ação Consultar INPE.')
         return value
 
     def validate_poligono(self,value):

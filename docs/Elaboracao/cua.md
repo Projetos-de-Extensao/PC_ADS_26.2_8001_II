@@ -228,7 +228,7 @@ validar o modelo de dados e a decisão na balança.
 | UC-FUN-007 Revisar status | Portal proposto: justificativa, autor e snapshot preservados | `/app/talhoes/ID/revisar/` | `PortalTests.test_revisao_exige_justificativa_e_preserva_evidencia` |
 | UC-FUN-009 Consultar histórico e mapa | Portal proposto: mapa por status, filtros e trilha operacional; sem Athena | `/` e `/app/estado/` | testes de estado e roteiro de navegador |
 
-A proposta local também implementa decisão do operador, solicitação/agendamento de vistoria, recepção de imagens e exportação do registro operacional. O [guia do frontend](../Construcao/frontend_raizes.md) registra os contratos e limites. Ingestão ambiental real, notificações SNS, upload de 5 GB e o pacote completo S3 continuam dependentes da arquitetura-alvo.
+O portal implantado também implementa decisão do operador, solicitação/agendamento de vistoria, recepção de imagens e exportação do registro operacional. O [guia do frontend](../Construcao/frontend_raizes.md) registra os contratos. A evolução com INPE/DETER, S3, DynamoDB e publicação SNS está no [guia de integrações](../Construcao/integracoes_aws_ambientais.md); upload de 5 GB e o pacote integral de retenção permanecem na arquitetura-alvo.
 
 ### 7.1. Cenário arquitetural da Release 1
 

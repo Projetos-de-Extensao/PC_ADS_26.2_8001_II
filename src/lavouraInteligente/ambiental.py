@@ -14,6 +14,7 @@ from django.utils import timezone
 from pyproj import CRS, Transformer
 from shapely.geometry import shape
 from shapely.ops import transform
+from shapely.errors import GEOSException
 
 from .cloud import enqueue
 from .models import AnaliseAmbiental, EventoAuditoria, Talhao
@@ -28,7 +29,11 @@ def canonical(value):
     return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()
 
 def geometry(value):
-    geom=shape(value)
+    if not isinstance(value,dict) or value.get('type') not in ('Polygon','MultiPolygon'):
+        raise ValueError('Cadastre um polígono GeoJSON antes de analisar a origem.')
+    try:geom=shape(value)
+    except (ValueError,TypeError,AttributeError,IndexError,GEOSException) as exc:
+        raise ValueError('Coordenadas inválidas no polígono.') from exc
     if geom.geom_type not in ('Polygon','MultiPolygon') or geom.is_empty or not geom.is_valid or geom.area<=0:
         raise ValueError('Polígono vazio ou topologicamente inválido.')
     a,b,c,d=geom.bounds
@@ -75,7 +80,7 @@ def evaluate(polygon,datasets,buffer_m=100):
                     'area_intersecao_m2':round(overlap,2),
                     'geometria':feature['geometry'],
                     'bloqueante':overlap>0 and category.startswith('DESMATAMENTO')})
-            except (ValueError,KeyError,TypeError):invalid+=1
+            except (ValueError,KeyError,TypeError,GEOSException):invalid+=1
     blocked=any(e['bloqueante'] for e in evidence)
     status='BLOQUEADO' if blocked else 'REVISAO'
     reason=('Interseção com alerta DETER de desmatamento posterior a 31/12/2020.' if blocked else

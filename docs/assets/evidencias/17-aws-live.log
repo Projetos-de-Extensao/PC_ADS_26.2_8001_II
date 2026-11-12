@@ -1,0 +1,14 @@
+AUTHENTICATED_PORTAL / 200
+AUTHENTICATED_PORTAL /app/estado/ 200
+AUTHENTICATED_PORTAL /app/integracoes/ 200
+AUTHENTICATED_PORTAL /app/analises/1/ 200
+{
+    "Item": {
+        "status": {
+            "S": "REVISAO"
+        },
+        "versao": {
+            "N": "4"
+        }
+    }
+}

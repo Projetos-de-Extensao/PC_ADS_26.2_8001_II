@@ -6,7 +6,7 @@ title: Modelo de Análise (Segurança)
 # Modelo de Análise (Pacotes e Subsistemas) (v2.2)
 
 !!! info "Escopo da entrega AP2"
-    As seções de segurança e nuvem descrevem a arquitetura-alvo. Os pacotes efetivamente implantados na Release 1 estão na seção 6; a API acadêmica usa AllowAny e o Admin exige autenticação.
+    As seções de segurança e nuvem descrevem a arquitetura-alvo. A API permite leitura pública e exige equipe autenticada para gravação. O [guia de integrações](../Construcao/integracoes_aws_ambientais.md) registra a evolução real com portal, INPE/DETER, S3, DynamoDB e SNS; os demais serviços não são apresentados como concluídos.
 
 
 **Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>

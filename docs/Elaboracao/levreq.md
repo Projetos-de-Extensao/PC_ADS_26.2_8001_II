@@ -19,18 +19,18 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 | Requisito / regra | Situação e evidência |
 | -- | -- |
 | RF-CAD: cadastro de produtor, fazenda, talhão e lote | CRUD relacional implementado; serializers aninhados e cinco recursos validados por HTTP público. |
-| RF-GEO | Parcial: GeoJSON em JSONB; sem upload KML, validação geométrica completa, versionamento ou PostGIS. |
+| RF-GEO | Parcial: KML/GeoJSON no portal, JSONB, validação topológica na análise e snapshots das alterações pela API; PostGIS e cobertura de edições SQL/Admin pendentes. |
 | RF-LOT-01 e RF-LOT-03 / RN-08 | Implementados: recebimento grava lote e itens em transação e aplica o pior status. |
 | RF-LOT-02 | Parcial: status, motivo, horário de recebimento e itens; sem versão/data independente do cálculo ambiental. |
 | RF-LOT-04 | Implementado na proposta do portal: decisão, justificativa, operador, data e status consultado; decisão preservada sem edição. |
-| RN-04 | Parcial: no recebimento, ausência de polígono impede APROVADO. Não há validação completa da geometria, idade das fontes ou validade do cálculo. |
-| RF-RSK-05 / RN-06 | Portal: revisão com justificativa, autor, antes/depois e snapshot original. PATCH CRUD/Admin legados ainda não são a matriz completa de autorização do produto. |
+| RN-04 | Recebimento/decisão conferem geometria, hash e validade do cálculo existente. Consulta ambiental incompleta permanece em revisão; regras de defasagem específicas de cada fonte ainda exigem evolução. |
+| RF-RSK-05 / RN-06 | Portal: revisão com justificativa, autor, antes/depois e snapshot original. API não permite forjar status/validade da análise. Admin e SQL ainda exigem governança fora da matriz completa do produto. |
 | RF-HIS-01 | Proposta do frontend: painel, mapa SVG por status, busca e filtros por produtor/município/status. Histórico operacional persistido e filtrável; Athena continua futuro. |
-| RF-IDN | Portal autenticado com acesso da equipe e CSRF; Admin autenticado. API CRUD acadêmica AllowAny e segregação por perfil/cooperativa ainda pendentes. |
+| RF-IDN | Portal com equipe/sessão/CSRF; API com leitura pública e gravação restrita à equipe. Cognito/MFA e segregação por cooperativa permanecem pendentes. |
 | RN-09 | Futuro: o CRUD atual faz exclusão física; retenção e exclusão lógica ainda não implementadas. |
 | RF-DRN | Proposta: solicitar/agendar/receber imagens e preservar hash. Recepção local até 20 MB; upload retomável de 5 GB, georreferência automática e cobertura ainda pendentes. |
-| RF-AUD | Proposta: histórico de eventos e exportação do registro disponível com manifesto SHA-256; retenção/imutabilidade completa e pacote S3 ainda pendentes. |
-| RF-AMB, RF-ALT; demais RF-RSK/RF-HIS | Evolução: ingestão real, SNS, DynamoDB, Athena e análise ambiental automática não estão implantados. |
+| RF-AUD | Histórico, exportação com SHA-256 e arquivamento JSON em S3 versionado; Object Lock e retenção completa de cinco anos permanecem pendentes. |
+| RF-AMB, RF-ALT; demais RF-RSK/RF-HIS | INPE/DETER real, análise Shapely/PROJ, snapshots, worker, DynamoDB e publicação SNS implantados. MapBiomas/Sentinel, Athena e deduplicação integral de datasets permanecem pendentes. |
 
 Os critérios completos abaixo permanecem como especificação do produto, não como declaração de implementação integral.
 

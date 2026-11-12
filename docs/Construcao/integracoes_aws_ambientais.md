@@ -88,7 +88,7 @@ do envio; falhas encerram o script com erro e devem ser acompanhadas no log do c
 
 ## Validação
 
-36 testes aprovados em PostgreSQL 18 isolado no Windows: domínio original, interface,
+40 testes aprovados em PostgreSQL 18 isolado no Windows: domínio original, interface,
 autenticação/CSRF, uploads, exportações, corte temporal, interseção, distância, fonte
 truncada/indisponível, preservação de bloqueio, edição concorrente e retry AWS.
 Os testes AWS usam o Stubber oficial do botocore; comprovação dos serviços reais deve
@@ -121,5 +121,28 @@ O limite de capacidade DynamoDB reduz picos de requisições; não limita a fatu
 ## Registro de implantação
 
 11/11/2026: template validado no console e criação da pilha `raizes-integracoes`
-concluída com `CREATE_COMPLETE` em us-east-2. Vinculação IAM, deploy da aplicação e
-envios reais devem ser registrados após verificação, abaixo.
+concluída com `CREATE_COMPLETE` em us-east-2. Perfil da pilha vinculado à instância
+`i-0c52ff121375a0404`; identidade STS e IMDSv2 dentro do container confirmados, sem
+extrair credenciais. PostgreSQL foi preservado e as migrations foram aplicadas.
+
+- Frontend/login, API e CSS/JS respondem HTTP 200 pelo endereço público.
+- Portal, estado, integrações e download da análise retornam 200 em sessão autenticada
+  validada dentro da EC2, sem exportar senhas ou cookies.
+- Quatro análises realizadas: duas consultas INPE/DETER concluídas por origem, sem
+  falhas de fonte; 18 entregas AWS concluídas e zero pendências no momento da verificação.
+- S3 contém os quatro snapshots ambientais e quatro eventos de auditoria; DynamoDB
+  devolveu o status `REVISAO` e a versão esperada para `TALHAO#1`.
+- Uma cópia completa ao S3 autorizada e executada: dump gzip de 10.729 bytes e arquivo
+  de mídia de 104 bytes (volume ainda vazio). A cópia foi comparada byte a byte e
+  restaurada em banco separado: 2 produtores, 4 talhões, 4 análises e 18 entregas.
+  O banco temporário foi removido após validação; o banco ativo foi preservado.
+- Cron original `0 3 * * *` mantido; exportação recorrente ao S3 desativada.
+- 36 testes passaram na EC2/PostgreSQL 16 na implantação inicial. A proteção final
+  contra validade vencida, polígono alterado e origem bloqueada ampliou a suíte para
+  40 testes no Windows/PostgreSQL 18; a validação da revisão final está nas evidências.
+
+As consultas às quatro áreas de demonstração não encontraram alerta DETER no envelope.
+Por isso três áreas ficaram em revisão por cobertura incompleta; o bloqueio anterior
+da quarta foi preservado. Esses resultados não representam aprovação ambiental das
+propriedades fictícias do seed. A reprodução dos testes não depende de indisponibilidade
+ou disponibilidade das fontes públicas, pois os casos automatizados usam respostas controladas.

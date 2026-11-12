@@ -6,7 +6,7 @@ title: Documento de Arquitetura
 # Documento de Arquitetura (v1.2)
 
 !!! info "Escopo da entrega AP2"
-    A Release 1 usa Django, Gunicorn e PostgreSQL em uma única EC2. API Gateway, Lambda, DynamoDB, RDS/PostGIS, S3 e drones são evolução arquitetural, não serviços comprovados no deploy desta entrega.
+    A entrega AP2 usa Django/Gunicorn e PostgreSQL em uma EC2. A evolução de 11/11/2026 acrescentou portal, consulta INPE/DETER, S3, DynamoDB e SNS reais, conforme o [registro de integrações](../Construcao/integracoes_aws_ambientais.md). API Gateway/Lambda, RDS/PostGIS e o processamento avançado de drones permanecem na arquitetura-alvo.
 
 
 **Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>

@@ -17,7 +17,7 @@ Raízes é o nome do produto informado pelo responsável; o case da disciplina �
 
 | Critério | Evidência / situação |
 | -- | -- |
-| A1 | Nome Raízes e pacote `raizes_config` preparados localmente; renomeação ainda não implantada. |
+| A1 | Nome Raízes, portal e pacote `raizes_config` implantados na EC2 em 11/11/2026. |
 | A2–A3 | Cinco models, FKs, associação LoteTalhao, JSONB e índice GIN por migration verificados. |
 | A4 | Endpoint de recebimento com 201; dois casos de rollback 409 sem alteração de contagens. |
 | A5 | CRUD completo dos cinco recursos, inclusive PUT/PATCH/DELETE, aninhamento e filtro JSON testados por HTTP externo. |
@@ -35,7 +35,7 @@ Raízes é o nome do produto informado pelo responsável; o case da disciplina �
 | Ambiente | Resultado |
 | -- | -- |
 | EC2, PostgreSQL 16, versão já implantada | 10 testes aprovados; migrations aplicadas; models sem migration pendente. |
-| Windows, PostgreSQL 18 isolado, proposta local | 36 testes aprovados, incluindo CRUD e contratos do portal (sessão/CSRF, revisão, balança, vistorias, arquivos, exportação). |
+| Windows, PostgreSQL 18 isolado, proposta local | 40 testes aprovados, incluindo CRUD e contratos do portal (sessão/CSRF, revisão, balança, vistorias, arquivos, exportação). |
 | HTTP público a partir do Windows | CRUD, filtro JSON, aninhamento, recebimento e rollback aprovados; registros temporários removidos. |
 | Latência de demonstração | 20 GETs sequenciais: p50 310,3 ms, p95 339,6 ms. Sem teste sustentado de carga ou volumetria de produção. |
 | Restore isolado | 2 produtores, 3 fazendas, 4 talhões, 3 lotes, 2 itens e 1 índice GIN, iguais ao banco original no momento da captura. Restore pequeno em 2 s; não é prova de RTO de uma instância perdida. |
@@ -58,7 +58,7 @@ As imagens de logs são transcrições das saídas reais capturadas via SSH. A i
 
 1. Registrar o deploy autorizado e as verificações AWS no guia de integrações.
 2. Conferência no console AWS das regras de entrada do SG: SSH restrito ao IP de administração, API 8000 e nenhuma exposição PostgreSQL.
-3. Cópia externa do backup e política de retenção; o script atual produz apenas dumps locais. A instância deve estar ligada no horário diário do cron.
+3. Política contínua de retenção: o responsável autorizou uma única cópia S3, restaurada em banco separado. O cron diário permanece somente local, por escolha expressa. A instância deve estar ligada no horário agendado.
 4. Confirmação dos membros e professor no repositório, commits individuais reais, aprovações e apresentação da equipe. Esta revisão não simula aprovação ou autoria de terceiros.
 5. Validação dos custos e elegibilidade de Free Tier na conta; valores documentados são estimativas, sem acesso à fatura ou ao AWS Pricing Calculator autenticado.
 

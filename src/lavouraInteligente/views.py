@@ -137,11 +137,10 @@ class LoteViewSet(RegistroAuditoriaMixin, viewsets.ModelViewSet):
                     vistos.add(talhao.pk)
                     LoteTalhao.objects.create(lote=lote, talhao=talhao, peso_kg=item["peso_kg"])
                     soma += item["peso_kg"]
-                    status_efetivo = talhao.status
-                    if status_efetivo == StatusRisco.APROVADO and not talhao.poligono:
-                        status_efetivo = StatusRisco.REVISAO
-                    if status_efetivo in piores:
-                        piores[status_efetivo].append(talhao.codigo)
+                    from .risco import status_efetivo
+                    atual = status_efetivo(talhao)
+                    if atual in piores:
+                        piores[atual].append(talhao.codigo)
                 if soma != dados["peso_total_kg"]:
                     raise RegraNegocioError(
                         f"Soma dos itens ({soma} kg) diferente do peso total ({dados['peso_total_kg']} kg)."

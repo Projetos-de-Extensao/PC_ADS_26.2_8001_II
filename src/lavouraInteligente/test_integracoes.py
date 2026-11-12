@@ -47,6 +47,7 @@ class SpatialTests(TestCase):
         self.assertFalse(result['alertas'][0]['bloqueante'])
 
     def test_poligono_auto_intersectante_rejeitado(self):
+        with self.assertRaises(ValueError):geometry({})
         with self.assertRaises(ValueError):
             geometry({'type':'Polygon','coordinates':[[[-55,-10],[-54,-9],[-55,-9],[-54,-10],[-55,-10]]]})
 
@@ -123,3 +124,42 @@ class IntegrationTests(TestCase):
         response=self.client.post('/api/produtores/',{'nome':'sem autorização'})
         self.assertEqual(response.status_code,403)
         self.assertEqual(self.client.get('/api/').status_code,200)
+
+    def test_status_efetivo_recusa_analise_vencida_e_geometria_alterada(self):
+        from .risco import status_efetivo
+        from django.utils import timezone
+        from datetime import timedelta
+        self.plot.atributos['analise_ambiental']={'valido_ate':(timezone.now()-timedelta(seconds=1)).isoformat(),
+            'poligono_sha256':hashlib.sha256(canonical(self.plot.poligono)).hexdigest()}
+        self.assertEqual(status_efetivo(self.plot),'REVISAO')
+        self.plot.atributos['analise_ambiental']['valido_ate']=(timezone.now()+timedelta(hours=1)).isoformat()
+        self.assertEqual(status_efetivo(self.plot),'APROVADO')
+        self.plot.poligono=polygon(x=-56)
+        self.assertEqual(status_efetivo(self.plot),'REVISAO')
+
+    def test_novo_talhao_nao_pode_forjar_aprovacao_pela_api(self):
+        from django.contrib.auth import get_user_model
+        self.client.force_login(get_user_model().objects.create_user('operador',is_staff=True))
+        response=self.client.post('/api/talhoes/',{'fazenda':self.plot.fazenda_id,'codigo':'SEM-APROVACAO',
+            'cultura':'soja','area_ha':'1.00','status':'APROVADO'})
+        self.assertEqual(response.status_code,201)
+        self.assertEqual(response.json()['status'],'REVISAO')
+
+    def test_validade_da_analise_nao_pode_ser_forjada_pela_api(self):
+        from django.contrib.auth import get_user_model
+        self.client.force_login(get_user_model().objects.create_user('operador',is_staff=True))
+        response=self.client.patch(f'/api/talhoes/{self.plot.pk}/',json.dumps({'atributos':{
+            'analise_ambiental':{'valido_ate':'2099-01-01T00:00:00Z'}}}),content_type='application/json')
+        self.assertEqual(response.status_code,400)
+
+    def test_decisao_reconsulta_origem_apos_alerta_novo(self):
+        from django.contrib.auth import get_user_model
+        from .models import Lote,LoteTalhao
+        self.client.force_login(get_user_model().objects.create_user('operador',is_staff=True))
+        lot=Lote.objects.create(codigo='ANTES-DO-ALERTA',peso_total_kg=1,status='APROVADO')
+        LoteTalhao.objects.create(lote=lot,talhao=self.plot,peso_kg=1)
+        self.plot.status='BLOQUEADO';self.plot.save()
+        response=self.client.post(f'/app/lotes/{lot.pk}/decisao/',json.dumps({'acao':'ACEITAR',
+            'justificativa':'Tentativa posterior a alerta novo.'}),content_type='application/json')
+        self.assertEqual(response.status_code,409)
+        self.assertFalse(hasattr(lot,'decisao'))

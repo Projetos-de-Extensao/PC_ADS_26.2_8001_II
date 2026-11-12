@@ -116,7 +116,7 @@ Nenhuma senha de demonstração local é criada no servidor público.
 
 O [guia do frontend](docs/Construcao/frontend_raizes.md) liga telas e requisitos.
 O [guia de integrações](docs/Construcao/integracoes_aws_ambientais.md) descreve INPE/DETER,
-S3, DynamoDB, SNS, fila persistente e limites. A suíte contém 36 testes.
+S3, DynamoDB, SNS, fila persistente e limites. A suíte contém 40 testes.
 MapBiomas/Sentinel, perfis por cooperativa e ortomosaicos de 5 GB permanecem pendentes.
 
 ## API
@@ -200,7 +200,7 @@ O passo a passo manual está em
 | Transação | Recebimento 201; peso divergente e talhão repetido retornam 409, sem gravação parcial |
 | Admin | Login real com CSRF e listagem de talhões verificados; estáticos acessíveis |
 | Persistência | Mesmo registro, ID e conteúdo após `docker compose down` e `up -d` |
-| Testes | 10 testes da versão atual na EC2/PostgreSQL 16; 36 testes da proposta no Windows/PostgreSQL 18 isolado |
+| Testes | 10 testes da versão atual na EC2/PostgreSQL 16; 40 testes da proposta no Windows/PostgreSQL 18 isolado |
 | Restore | Banco separado restaurado; contagens das cinco tabelas e índice GIN iguais ao original |
 | Backup | Dump local e envio S3 por função IAM quando configurado; ver guia de integrações |
 | Security Group | `launch-wizard-2` identificado. Conferência das regras no console AWS pendente; não há credenciais EC2 API na sessão SSH |

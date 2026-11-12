@@ -1,0 +1,55 @@
+Found 36 test(s).
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+...Cloud delivery 10 failed (TimeoutError)
+.........Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+............Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+............
+----------------------------------------------------------------------
+Ran 36 tests in 5.201s
+
+OK
+Destroying test database for alias 'default'...
+integracoes-1  | {'enviados': 18, 'falhas': 0, 'configurado': True}
+24 objects imported automatically (use -v 2 for details).
+
+ANALISES [{'id': 4, 'talhao_id': 4, 'status': 'BLOQUEADO'}, {'id': 3, 'talhao_id': 3, 'status': 'REVISAO'}, {'id': 2, 'talhao_id': 2, 'status': 'REVISAO'}, {'id': 1, 'talhao_id': 1, 'status': 'REVISAO'}]
+FONTES [(4, 2, [], 'Sem alerta DETER na consulta. MapBiomas/Sentinel e cobertura das fontes ainda pendentes. Bloqueio anterior preservado até revisão humana.'), (3, 2, [], 'Sem alerta DETER na consulta. MapBiomas/Sentinel e cobertura das fontes ainda pendentes.'), (2, 2, [], 'Sem alerta DETER na consulta. MapBiomas/Sentinel e cobertura das fontes ainda pendentes.'), (1, 2, [], 'Sem alerta DETER na consulta. MapBiomas/Sentinel e cobertura das fontes ainda pendentes.')]
+CLOUD 18 0
+ERROS []
+[
+    {
+        "Key": "ambiental/talhao-1/analise-1.json",
+        "Size": 2162
+    },
+    {
+        "Key": "ambiental/talhao-2/analise-2.json",
+        "Size": 2192
+    },
+    {
+        "Key": "ambiental/talhao-3/analise-3.json",
+        "Size": 2136
+    },
+    {
+        "Key": "ambiental/talhao-4/analise-4.json",
+        "Size": 2210
+    },
+    {
+        "Key": "auditoria/evento-1.json",
+        "Size": 343
+    },
+    {
+        "Key": "auditoria/evento-2.json",
+        "Size": 343
+    },
+    {
+        "Key": "auditoria/evento-3.json",
+        "Size": 343
+    },
+    {
+        "Key": "auditoria/evento-4.json",
+        "Size": 397
+    }
+]

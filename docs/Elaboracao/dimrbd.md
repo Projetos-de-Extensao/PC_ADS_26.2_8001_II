@@ -83,7 +83,7 @@ Custo de referência do EBS gp3 (us-east-2): US$ 0,08/GB-mês × 30 GB = **~US$ 
 | -- | -- |
 | Ferramenta | `pg_dump` lógico, executado por `scripts/backup_db.sh` |
 | Frequência | diária, agendada no `cron` da EC2 (ex.: `0 3 * * * bash ~/PC_ADS_26.2_8001_II/scripts/backup_db.sh`) |
-| Retenção | Dumps locais sem rotação automática; 7 diários e cópia S3 são política planejada, ainda não implementada |
+| Retenção | Dumps locais sem rotação automática; uma cópia S3 autorizada e restaurada em banco isolado. Envio recorrente S3 desativado por escolha do responsável; sete diários ainda são política-alvo. |
 | Tamanho do dump | ~25–35% do banco após gzip (~150 MB no ano 1) |
 | Custo no S3 | ~11 dumps × 0,15 GB × US$ 0,023 = **< US$ 0,05/mês** |
 | RPO | **24 h** (intervalo entre dumps) |

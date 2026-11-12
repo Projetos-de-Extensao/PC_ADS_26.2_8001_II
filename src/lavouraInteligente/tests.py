@@ -17,7 +17,7 @@ class BaseDados(APITestCase):
             produtor=self.produtor, nome="Santa Rita", municipio="Cristalina", uf="GO", area_ha=Decimal("500"))
         self.ok = Talhao.objects.create(
             fazenda=self.fazenda, codigo="T_OK", cultura="soja", area_ha=Decimal("10"),
-            poligono={"type": "Polygon", "coordinates": []},
+            poligono={"type":"Polygon","coordinates":[[[-55,-10],[-54.99,-10],[-54.99,-9.99],[-55,-9.99],[-55,-10]]]},
             atributos={"bioma": "cerrado", "ndvi": 0.8, "fonte": "MapBiomas"})
         self.suspeito = Talhao.objects.create(
             fazenda=self.fazenda, codigo="T_SUSP", cultura="soja", area_ha=Decimal("10"),

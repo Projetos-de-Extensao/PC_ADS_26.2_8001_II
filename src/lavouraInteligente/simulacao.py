@@ -42,7 +42,7 @@ def criar(cenario,actor,key=None):
     if previous:return previous
     if CenarioSimulado.objects.count()>=200:raise ValueError('O laboratório atingiu 200 cenários preservados.')
     producer,_=Produtor.objects.get_or_create(documento='DEMO-RAIZES',defaults={
-        'nome':'Cooperado fictício · laboratório','municipio':'Cristalina','uf':'GO'})
+        'simulado':True,'nome':'Cooperado fictício · laboratório','municipio':'Cristalina','uf':'GO'})
     producer=Produtor.objects.select_for_update().get(pk=producer.pk)
     farm,_=Fazenda.objects.get_or_create(produtor=producer,nome='Fazenda virtual Raízes',defaults={
         'municipio':'Cristalina','uf':'GO','area_ha':1000,'car_codigo':'DEMONSTRACAO-SEM-CAR-REAL'})

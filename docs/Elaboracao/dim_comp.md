@@ -13,7 +13,7 @@ title: Dimensionamento de Computação (EC2)
 ## 1. Objetivo
 
 Definir o tipo de instância EC2 que executa, na mesma máquina, os containers **web**
-(Django + Gunicorn) e **db** (PostgreSQL 16) da Release 1, com base no cenário de
+(Django + Gunicorn), **db** (PostgreSQL 16) e **integracoes** (worker) da Release 1, com base no cenário de
 referência do [Documento de Requisitos Suplementares](../Iniciacao/rs.md) e em medições
 feitas com a própria aplicação.
 
@@ -49,7 +49,7 @@ Verificação de 11/11/2026 na EC2 t3.small, com o seed e registros de demonstra
 
 | Medida | Resultado e limite |
 | -- | -- |
-| Memória `web` (3 workers) | 141,9 MiB em uma amostra de `docker stats`, sem carga sustentada |
+| Memória `web` (3 workers, versão histórica) | 141,9 MiB em uma amostra de `docker stats`, sem carga sustentada |
 | Memória `db` | 55,7 MiB na mesma amostra |
 | 20 GETs externos sequenciais em `/api/talhoes/` | p50 310,3 ms; p95 339,6 ms, incluindo rede do cliente Windows |
 | JSONB/GIN | Índice criado e testado; o plano efetivo fica no registro SQL da validação. Não se garante uso do GIN em toda consulta. |
@@ -57,33 +57,36 @@ Verificação de 11/11/2026 na EC2 t3.small, com o seed e registros de demonstra
 
 As antigas referências de 49 ms e plano GIN não possuíam artefato reproduzível nesta revisão e não são usadas como prova. Esta amostra não comprova 20 req/s por 30 minutos nem a volumetria-alvo. O volume de 30 GB da seção seguinte é uma **recomendação**, diferente dos 8 GiB efetivamente encontrados.
 
+Amostra atual de 12/11/2026, sem carga sustentada: web **174,2 MiB**, db **61,19 MiB**, integracoes **88,96 MiB**; disco livre **2,1 GiB**. A medição anterior acima é mantida como histórico.
+
 ## 5. Memória de cálculo
 
 | Componente | Memória estimada | Base |
 | -- | -- | -- |
 | Amazon Linux 2023 + Docker Engine | ~400 MiB | sistema operacional e daemon |
-| `web`: Gunicorn, 3 workers | ~150 MiB (medido) → até 300 MiB sob carga | ~50–100 MiB por worker |
+| `web`: Gunicorn, 2 workers e 2 threads | ~150 MiB (medido) → até 300 MiB sob carga | ~50–100 MiB por worker |
 | `db`: PostgreSQL 16 | 52 MiB ocioso → ~400 MiB com `shared_buffers` 128 MiB, cache e 20 conexões | padrão da imagem oficial |
+| `integracoes`: processo Python de integração | ~90 MiB ocioso → até 250 MiB durante geoprocessamento | amostra atual e folga estimada |
 | Folga para `docker compose build` (pip install) | ~300 MiB | pico só durante o deploy |
-| **Total no pico** | **~1,4 GiB** | |
+| **Total no pico** | **~1,65 GiB** | |
 
-**Throughput**: três workers não permitem deduzir a capacidade sem um teste concorrente. O cenário de 20 req/s por 30 min permanece uma meta de validação, e não uma medição realizada.
+**Throughput**: a quantidade de workers não permitem deduzir a capacidade sem um teste concorrente. O cenário de 20 req/s por 30 min permanece uma meta de validação, e não uma medição realizada.
 
 **Workers**: a regra usual é `2 × vCPU + 1`. Na t3.small isso daria 5 workers, mas a
-equipe fixou 3 (`--workers 3` no `Dockerfile`) para deixar memória ao Postgres.
+versão atual usa 2 workers com 2 threads (`--workers 2 --threads 2`) e um worker de integrações separado para preservar memória.
 
 ## 6. Escolha da instância
 
 | Tipo | vCPU | Memória | Preço on-demand* | Avaliação |
 | -- | -- | -- | -- | -- |
-| t3.micro | 2 | 1 GiB | ~US$ 7,59/mês | Funciona para demonstração, mas o pico de ~1,4 GiB exige swap e o build fica lento. |
-| **t3.small** | **2** | **2 GiB** | **~US$ 15,18/mês** | **Escolhida**: atende ao pico com folga de ~600 MiB e créditos de CPU suficientes para a balança. |
+| t3.micro | 2 | 1 GiB | ~US$ 7,59/mês | Funciona para demonstração, mas o pico estimado de ~1,65 GiB exige swap e o build fica lento. |
+| **t3.small** | **2** | **2 GiB** | **~US$ 15,18/mês** | **Escolhida**: atende ao pico com folga estimada de ~350 MiB e créditos de CPU suficientes para a balança. |
 | t3.medium | 2 | 4 GiB | ~US$ 30,37/mês | Indicada se o teste de carga mostrar falta de memória ou para 2x talhões com muitos usuários. |
 
 \* Região us-east-2 (Ohio), Linux, 730 h/mês. São valores de referência que devem ser
 conferidos no AWS Pricing Calculator na data da entrega (RNF-CUS-04).
 
-**Decisão**: **t3.small**, com volume EBS gp3 de 30 GB (ver
+**Decisão**: **t3.small**, com disco efetivo de 8 GiB; recomenda-se EBS gp3 de 30 GB (ver
 [Dimensionamento de Banco de Dados](dimrbd.md)). Se a equipe usar uma t3.micro do Free
 Tier na demonstração, deve criar 1 GiB de swap antes do primeiro build.
 

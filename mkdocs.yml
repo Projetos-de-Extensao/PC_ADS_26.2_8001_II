@@ -30,10 +30,12 @@ nav:
       - Frontend Raízes: Construcao/frontend_raizes.md
       - Integrações AWS e ambientais: Construcao/integracoes_aws_ambientais.md
       - Guia de operação e simulação: Construcao/guia_simulacao.md
+      - Integridade e máscaras: Construcao/integridade_validacoes.md
   - Transição:
       - Index: Transicao/index.md
       - Estratégias de Deploy: Transicao/ativ_deploy.md
       - Validação da AP2: Transicao/validacao_ap2.md
+      - Auditoria do roteiro AP2: Transicao/auditoria_roteiro_ap2.md
 
 extra_css:
   - css/extra.css

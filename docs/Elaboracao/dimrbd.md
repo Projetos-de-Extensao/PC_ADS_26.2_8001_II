@@ -117,7 +117,7 @@ seção 6.
 | Critério | Volume Docker na EC2 (Release 1) | Amazon RDS for PostgreSQL |
 | -- | -- | -- |
 | Custo mensal* | incluso na EC2 + EBS (~US$ 2,40 de disco) | db.t4g.micro Single-AZ ~US$ 11,68 + 20 GB gp3 ~US$ 2,30; Multi-AZ ~2x |
-| Backup | `pg_dump` + cron locais; cópia S3 ainda planejada | automático, com PITR de até 35 dias |
+| Backup | `pg_dump` + cron locais; uma cópia S3 autorizada e testada; recorrência desativada | automático, com PITR de até 35 dias |
 | RPO / RTO | 24 h / < 30 min | ~5 min (PITR) / minutos (Multi-AZ com failover) |
 | Alta disponibilidade | não (mesma instância do web) | Multi-AZ opcional |
 | Atualização e patches | responsabilidade da equipe (`image: postgres:16`) | gerenciados pela AWS |

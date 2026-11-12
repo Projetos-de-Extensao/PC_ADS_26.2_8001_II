@@ -220,5 +220,5 @@ para continuar reproduzíveis.
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
 | Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
-| Responsável de Segurança | | | Pendente |
+| Responsável de Segurança | Não designado pela equipe | Não registrada | Pendente de revisão humana |
 | Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

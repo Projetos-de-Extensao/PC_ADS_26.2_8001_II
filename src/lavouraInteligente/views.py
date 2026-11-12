@@ -1,7 +1,7 @@
 import json
 
 from django.core.exceptions import FieldError
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError, APIException
@@ -29,6 +29,12 @@ class ReferenciaAtiva(APIException):
 
 
 class RegistroAuditoriaMixin:
+    def handle_exception(self, exc):
+        if isinstance(exc, IntegrityError):
+            return Response({'detalhe':'O cadastro viola uma regra de integridade. Confira valores positivos, '
+                'documentos válidos, campos obrigatórios e registros duplicados.'}, status=409)
+        return super().handle_exception(exc)
+
     def registrar(self,instance,acao):
         usuario=self.request.user if self.request.user.is_authenticated else None
         EventoAuditoria.objects.create(ator=usuario,acao=acao,

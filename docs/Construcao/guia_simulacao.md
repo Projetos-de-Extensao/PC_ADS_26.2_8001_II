@@ -193,6 +193,6 @@ A migration `0004` acrescenta cenários e uploads virtuais. Para preparar exempl
 uma única vez: `docker compose exec -T web python manage.py seed_laboratorio`.
 Os exemplos são idempotentes; o comando não redefine cenários já usados.
 
-62 testes validam domínio, autenticação/CSRF, perfis, simulação, separação de ambientes,
+80 testes validam domínio, autenticação/CSRF, perfis, simulação, separação de ambientes,
 retomada de partes, validação do voo, dossiê e integrações. A validação visual percorre
 os fluxos em banco de QA separado antes do deploy.

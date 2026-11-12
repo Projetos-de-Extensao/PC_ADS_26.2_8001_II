@@ -12,7 +12,7 @@ from .models import Fazenda, Lote, LoteTalhao, Produtor, StatusRisco, Talhao
 class BaseDados(APITestCase):
     def setUp(self):
         self.client.force_authenticate(get_user_model().objects.create_user('teste-api',is_staff=True))
-        self.produtor = Produtor.objects.create(nome="João", documento="111", municipio="Cristalina", uf="GO")
+        self.produtor = Produtor.objects.create(nome="João", documento="52998224725", municipio="Cristalina", uf="GO")
         self.fazenda = Fazenda.objects.create(
             produtor=self.produtor, nome="Santa Rita", municipio="Cristalina", uf="GO", area_ha=Decimal("500"))
         self.ok = Talhao.objects.create(
@@ -29,7 +29,7 @@ class BaseDados(APITestCase):
 
 class RelacionalTests(BaseDados):
     def test_crud_e_serializer_aninhado(self):
-        resp = self.client.post("/api/produtores/", {"nome": "Maria", "documento": "222",
+        resp = self.client.post("/api/produtores/", {"nome": "Maria", "documento": "11144477735",
                                                       "municipio": "Altamira", "uf": "PA"}, format="json")
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         resp = self.client.get(f"/api/produtores/{self.produtor.id}/")
@@ -133,7 +133,7 @@ class CrudCompletoTests(BaseDados):
             recursos.append(url)
             return resposta.data['id']
 
-        produtor = criar('produtores', {'nome':'CRUD','documento':'crud-1',
+        produtor = criar('produtores', {'nome':'CRUD','documento':'12345678909',
                          'municipio':'Cristalina','uf':'GO'}, {'nome':'Atualizado'})
         fazenda = criar('fazendas', {'produtor':produtor,'nome':'CRUD','municipio':'Cristalina',
                         'uf':'GO','area_ha':'10.00'}, {'nome':'Atualizada'})

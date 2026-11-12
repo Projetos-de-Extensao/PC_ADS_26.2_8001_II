@@ -171,7 +171,7 @@ function recordsPage(kind) {
     `<div class="filter-bar"><label class="filter-input">${icon('search')}<input data-filter="q" value="${esc(filters.q)}" placeholder="Buscar nome, documento ou município" aria-label="Buscar cadastro"></label><span class="filter-count">${list.length} cadastros</span></div>`+
     table(isFarm?['Fazenda','Produtor','Município','Área','Talhões','Ações']:['Produtor','Documento','Município','Fazendas','Ações'],list.map(x=>isFarm?
       `<tr><td><strong>${esc(x.nome)}</strong><small>${esc(x.car_codigo || 'CAR não informado')}</small></td><td>${esc(producer(x.produtor)?.nome)}</td><td>${esc(x.municipio)} · ${esc(x.uf)}</td><td>${number(x.area_ha,2)} ha</td><td>${x.talhoes.length}</td><td>${recordActions(kind,x.id)}</td></tr>`:
-      `<tr><td><strong>${esc(x.nome)}</strong></td><td>${esc(x.documento)}</td><td>${esc(x.municipio)} · ${esc(x.uf)}</td><td>${x.fazendas.length}</td><td>${recordActions(kind,x.id)}</td></tr>`),`${list.length} ${kind} nesta seleção`);
+      `<tr><td><strong>${esc(x.nome)}</strong></td><td>${esc(RaizesDocumento.mask(x.documento))}</td><td>${esc(x.municipio)} · ${esc(x.uf)}</td><td>${x.fazendas.length}</td><td>${recordActions(kind,x.id)}</td></tr>`),`${list.length} ${kind} nesta seleção`);
 }
 function recordActions(kind,id) {return `<button class="button small" data-action="edit-record" data-kind="${kind}" data-id="${id}">Editar</button> <button class="button text small" data-action="delete-record" data-kind="${kind}" data-id="${id}">Excluir</button>`;}
 function inspectionsPage() {
@@ -226,8 +226,8 @@ function recordForm(kind,id=null) {
   if(!id && kind==='fazendas' && !state.produtores.length){location.hash='produtores';toast('Cadastre um produtor antes de adicionar sua primeira fazenda.');return;}
   const current=id ? state[kind].find(x=>x.id===Number(id)) : {},x=current || {};
   let fields='';
-  if(kind==='produtores')fields=inputField('nome','Nome completo','text',x.nome,'required maxlength="200"')+inputField('documento','CPF / CNPJ','text',x.documento,'required maxlength="20"')+inputField('municipio','Município','text',x.municipio,'required')+inputField('uf','UF','text',x.uf,'required maxlength="2" minlength="2"');
-  if(kind==='fazendas')fields=inputField('nome','Nome da fazenda','text',x.nome,'required')+selectField('produtor','Produtor responsável',state.produtores.map(p=>[p.id,p.nome]),x.produtor,'required')+inputField('car_codigo','Código CAR','text',x.car_codigo)+inputField('area_ha','Área total (ha)','number',x.area_ha,'required min="0.01" step="0.01"')+inputField('municipio','Município','text',x.municipio,'required')+inputField('uf','UF','text',x.uf,'required maxlength="2" minlength="2"');
+  if(kind==='produtores')fields=inputField('nome','Nome completo','text',x.nome,'required maxlength="200"')+inputField('documento','CPF / CNPJ','text',RaizesDocumento.mask(x.documento || ''),`required maxlength="18" data-documento autocomplete="off" spellcheck="false" placeholder="000.000.000-00 ou 00.000.000/0000-00" ${x.simulado?'readonly':''}`)+inputField('municipio','Município','text',x.municipio,'required')+selectField('uf','UF', [['','Selecione a UF'], ...'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(uf=>[uf,uf])],x.uf,'required');
+  if(kind==='fazendas')fields=inputField('nome','Nome da fazenda','text',x.nome,'required')+selectField('produtor','Produtor responsável',state.produtores.map(p=>[p.id,p.nome]),x.produtor,'required')+inputField('car_codigo','Código CAR','text',x.car_codigo)+inputField('area_ha','Área total (ha)','number',x.area_ha,'required min="0.01" step="0.01"')+inputField('municipio','Município','text',x.municipio,'required')+selectField('uf','UF', [['','Selecione a UF'], ...'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(uf=>[uf,uf])],x.uf,'required');
   if(kind==='talhoes')fields=inputField('codigo','Código do talhão','text',x.codigo,'required maxlength="40"')+selectField('fazenda','Fazenda de origem',state.fazendas.map(f=>[f.id,f.nome]),x.fazenda,'required')+inputField('cultura','Cultura','text',x.cultura,'required')+inputField('area_ha','Área do talhão (ha)','number',x.area_ha,'required min="0.01" step="0.01"')+
     (!id?selectField('status','Situação inicial',[['REVISAO','Em revisão']], 'REVISAO'):'')+
     selectField('atributo_bioma','Bioma',[['','Não informado'],['cerrado','Cerrado'],['amazonia','Amazônia'],['mata_atlantica','Mata Atlântica'],['caatinga','Caatinga'],['pampa','Pampa'],['pantanal','Pantanal']],x.atributos?.bioma || '')+
@@ -345,6 +345,10 @@ document.addEventListener('submit',async event=>{
     if(form.id==='record-form'){
       const kind=form.dataset.kind,id=form.dataset.id;
       if(data.uf)data.uf=data.uf.toUpperCase();
+      if(kind==='produtores' && data.documento!=='DEMO-RAIZES') {
+        if(!RaizesDocumento.valid(data.documento))throw new Error('Confira o CPF/CNPJ e os dígitos verificadores.');
+        data.documento=RaizesDocumento.clean(data.documento);
+      }
       if(kind==='talhoes'){
         try{data.poligono=JSON.parse(data.poligono || '{}');data.atributos=JSON.parse(data.atributos || '{}');}
         catch{throw new Error('Confira o JSON do polígono e dos atributos: há um erro de formato.');}

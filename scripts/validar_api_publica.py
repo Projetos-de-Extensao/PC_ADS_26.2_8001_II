@@ -8,7 +8,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import os
+import base64
+import getpass
+import secrets
 BASE = os.environ.get('AP2_BASE_URL', 'http://127.0.0.1:8000').rstrip('/')
+username = os.environ.get('AP2_USER') or input('Usuário da equipe: ')
+password = os.environ.get('AP2_PASSWORD') or getpass.getpass('Senha: ')
+auth = base64.b64encode(f'{username}:{password}'.encode()).decode()
+del password
 stamp = datetime.now(timezone.utc).strftime('%m%d%H%M%S')
 report = []
 created = []
@@ -16,7 +23,8 @@ created = []
 def request(method, path, data=None, expected=200):
     body = json.dumps(data).encode() if data is not None else None
     req = urllib.request.Request(BASE + path, data=body, method=method,
-                                 headers={'Content-Type': 'application/json'})
+                                 headers={'Content-Type': 'application/json','Accept':'application/json',
+                                          'Authorization':'Basic '+auth})
     try:
         response = urllib.request.urlopen(req, timeout=20)
     except urllib.error.HTTPError as error:
@@ -34,7 +42,12 @@ def create(resource, data):
 
 try:
     request('GET', '/api/')
-    produtor = create('produtores', {'nome':'Verificacao AP2', 'documento':'AP2'+stamp,
+    # Documento apenas para o cadastro fictício desta execução, sem pontuação.
+    cpf = ''.join(str(secrets.randbelow(10)) for _ in range(9))
+    for _ in range(2):
+        rest = sum(int(c)*(len(cpf)+1-i) for i,c in enumerate(cpf))%11
+        cpf += str(0 if rest<2 else 11-rest)
+    produtor = create('produtores', {'nome':'Verificacao AP2 fictícia', 'documento':cpf,
                                    'municipio':'Cristalina', 'uf':'GO'})
     fazenda = create('fazendas', {'produtor':produtor['id'], 'nome':'Fazenda AP2',
                      'car_codigo':'AP2-'+stamp, 'municipio':'Cristalina', 'uf':'GO','area_ha':'10.00'})
@@ -71,7 +84,7 @@ try:
         assert len(request('GET','/api/lote-itens/'))==before_itens
     recebido=request('POST','/api/lotes/receber/',{'codigo':'AP2-RECEBER-'+stamp,
                     'peso_total_kg':'100.00','itens':[{'talhao':talhao['id'],'peso_kg':'100.00'}]},201)
-    assert recebido['status']=='APROVADO' and len(recebido['itens'])==1
+    assert recebido['status']=='REVISAO' and len(recebido['itens'])==1
     created.append(f'/api/lotes/{recebido["id"]}/')
     for child in recebido['itens']:
         created.append(f'/api/lote-itens/{child["id"]}/')

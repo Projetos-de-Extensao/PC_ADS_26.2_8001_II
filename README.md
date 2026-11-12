@@ -42,12 +42,15 @@ flowchart LR
       subgraph Compose[Docker Compose]
         W[web<br/>Django 6.1 + DRF<br/>Gunicorn + WhiteNoise]
         D[(db<br/>PostgreSQL 16)]
+        I[integracoes<br/>worker ambiental / outbox]
       end
       V[(volume pgdata)]
       E[[src/.env<br/>fora do Git]]
     end
     SG --> W
     W -->|rede interna 5432| D
+    I --> D
+    I --> AWS[S3 / DynamoDB / SNS]
     D --- V
     E -.-> W
     Dev([Windows]) -->|git push| GH[GitHub]
@@ -116,13 +119,15 @@ Nenhuma senha de demonstração local é criada no servidor público.
 
 O [guia do frontend](docs/Construcao/frontend_raizes.md) liga telas e requisitos.
 O [guia de integrações](docs/Construcao/integracoes_aws_ambientais.md) descreve INPE/DETER,
-S3, DynamoDB, SNS, fila persistente e limites. A suíte contém 62 testes.
+S3, DynamoDB, SNS, fila persistente e limites. A suíte contém 80 testes.
 O [guia de operação e simulação](docs/Construcao/guia_simulacao.md) explica toda a
 infraestrutura e apresenta um roteiro. **Laboratório** oferece MapBiomas/Sentinel
 sintéticos, seis cenários e voo/envio virtual retomável; **Relatórios** e **Como funciona**
 completam a apresentação. Grupos Django aplicam os perfis funcionais no backend.
 MapBiomas/Sentinel reais, perfis por cooperativa e ortomosaicos reais de 5 GB permanecem
 na evolução de produção; não são necessários para executar o exercício acadêmico.
+
+Consulte a [auditoria completa A1–A8, B1–B8 e Parte C](docs/Transicao/auditoria_roteiro_ap2.md) e as [regras de integridade e máscaras](docs/Construcao/integridade_validacoes.md).
 
 ## API
 
@@ -180,7 +185,7 @@ curl -fsSL https://raw.githubusercontent.com/Projetos-de-Extensao/PC_ADS_26.2_80
 ```
 
 O script instala Docker, Git, Compose e Buildx, clona ou atualiza o repositório, cria o
-`src/.env` com segredos aleatórios (e mostra a senha do admin) e sobe `web` + `db`.
+`src/.env` com segredos aleatórios (e mostra a senha do admin) e sobe `web` + `db` + `integracoes`.
 
 **Atualizar** depois de um `git push` no Windows: rode o mesmo comando, ou
 `bash ~/PC_ADS_26.2_8001_II/scripts/deploy_ec2.sh`.
@@ -205,10 +210,10 @@ O passo a passo manual está em
 | Transação | Recebimento 201; peso divergente e talhão repetido retornam 409, sem gravação parcial |
 | Admin | Login real com CSRF e listagem de talhões verificados; estáticos acessíveis |
 | Persistência | Mesmo registro, ID e conteúdo após `docker compose down` e `up -d` |
-| Testes | 10 testes da versão atual na EC2/PostgreSQL 16; 62 testes da proposta no Windows/PostgreSQL 18 isolado |
+| Testes | 80 testes da atualização, incluindo integridade e migrations; ver auditoria de 12/11/2026 |
 | Restore | Banco separado restaurado; contagens das cinco tabelas e índice GIN iguais ao original |
 | Backup | Dump local e envio S3 por função IAM quando configurado; ver guia de integrações |
-| Security Group | `launch-wizard-2` identificado. Conferência das regras no console AWS pendente; não há credenciais EC2 API na sessão SSH |
+| Security Group | Console conferido em 12/11: `launch-wizard-2` somente TCP 22 e 8000; SSH ainda aceita qualquer origem IPv4 |
 
 As imagens de comandos abaixo são **transcrições das saídas reais capturadas por SSH**, não screenshots simulando uma janela de terminal. As capturas da API e do Admin são identificadas separadamente.
 
@@ -233,7 +238,7 @@ As imagens de comandos abaixo são **transcrições das saídas reais capturadas
 ![Cron e dumps locais](docs/assets/evidencias/09-backup-cron.png)
 ![Restauração em banco separado](docs/assets/evidencias/10-restore.png)
 
-O [registro de validação](docs/Transicao/validacao_ap2.md) separa verificações concluídas, propostas locais e pendências da entrega. Não há captura de regras do Security Group porque elas ainda não foram conferidas no console. Não confundir ausência de porta no Docker com prova das regras do SG.
+O [registro de validação](docs/Transicao/validacao_ap2.md) separa verificações concluídas, propostas locais e pendências da entrega. O console AWS foi conferido em 12/11: somente TCP 22 e 8000, sem 5432. Os detalhes atuais estão na auditoria do roteiro; as imagens abaixo são históricas.
 
 ## Documentação
 

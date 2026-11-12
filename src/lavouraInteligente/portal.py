@@ -191,6 +191,9 @@ def decidir(request,pk):
     if acao=='ACEITAR' and not lote.itens.exists():
         return JsonResponse({'detalhe':'Vincule os talhões de origem antes de aceitar o recebimento.'},status=409)
     if acao=='ACEITAR':
+        from django.db.models import Sum
+        if lote.itens.aggregate(total=Sum('peso_kg'))['total'] != lote.peso_total_kg:
+            return JsonResponse({'detalhe':'A soma dos pesos das origens deve ser igual ao peso total do lote.'},status=409)
         from .risco import status_efetivo
         origins=Talhao.objects.select_for_update().filter(entregas__lote=lote).order_by('pk')
         if any(status_efetivo(t)!='APROVADO' for t in origins):

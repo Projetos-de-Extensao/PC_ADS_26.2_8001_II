@@ -79,7 +79,7 @@ Git e da imagem de build. Cada imagem recebida possui tamanho, autor, data e has
 
 ## Validação e execução
 
-Os 62 testes automatizados cobrem também os contratos de autenticação, CSRF, revisão,
+Os 80 testes automatizados cobrem também os contratos de autenticação, CSRF, revisão,
 decisão, vistoria, arquivos e exportação. O roteiro de navegador verifica os fluxos com
 um banco separado de QA. Nenhum desses testes altera o banco da EC2.
 

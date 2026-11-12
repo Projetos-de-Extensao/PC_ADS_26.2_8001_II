@@ -8,12 +8,14 @@ title: Estratégias de Deploy (Atividades)
 **Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Transição<br>
 **Release**: 1 (AP2)<br>
-**Status**: Em revisão
+**Status**: Revisão técnica atualizada em 12/11/2026; aprovação acadêmica pendente
 
 ## 1. Objetivo
 
 Registrar as estratégias de implantação avaliadas, a escolhida para a Release 1, as
 atividades do deploy realizado, a estimativa de tempo e de custo e o plano de rollback.
+
+A implantação atual também executa o worker `integracoes` (mesma imagem do web), com S3, DynamoDB e SNS reais. Veja a [auditoria completa do roteiro](auditoria_roteiro_ap2.md).
 
 ## 2. Contexto
 
@@ -75,11 +77,11 @@ e a disponibilidade de 99,9% (ver [dimrbd.md](../Elaboracao/dimrbd.md), seção 
 | EC2 t3.small on-demand | 730 h | US$ 15,18 |
 | EBS gp3 | 30 GB | US$ 2,40 |
 | IPv4 público / Elastic IP associado | 730 h × US$ 0,005 | US$ 3,65 |
-| S3 para backups (planejado, não implantado) | — | Não incluído no ambiente observado |
+| S3 privado/versionado + DynamoDB sob demanda + SNS | uso de demonstração | Variável por armazenamento/requisições; uma cópia de backup autorizada, sem recorrência S3 |
 | Transferência de saída | < 100 GB (faixa gratuita) | US$ 0,00 |
 | **Total** | | **~US$ 21,28/mês** |
 
-Fica bem abaixo do orçamento de US$ 1.500/mês (RNF-CUS-01). A elegibilidade a créditos/Free Tier depende da conta e não foi confirmada. A instância real é t3.small.
+Fica bem abaixo do orçamento de US$ 1.500/mês (RNF-CUS-01). A elegibilidade a créditos/Free Tier depende da conta; nenhum saldo de crédito é publicado neste repositório. A instância real é t3.small.
 
 \* us-east-2, on-demand, valores de referência a confirmar no AWS Pricing Calculator.
 
@@ -106,12 +108,12 @@ Itens marcados foram verificados no ambiente de teste da equipe; os demais são 
 após o deploy na EC2.
 
 - [x] `.env` fora do Git; `.env.example` versionado sem senhas reais.
-- [x] 10 testes automatizados passando em `python manage.py test`.
+- [x] 80 testes automatizados passando em `python manage.py test`.
 - [x] PostgreSQL sem porta publicada (serviço `db` sem `ports` no Compose).
 - [x] Dados persistem depois de `docker compose down` e `up -d` (teste local).
 - [x] API no IP público atual e Django Admin autenticado com estáticos, verificados em 11/11/2026.
 - [ ] Security Group só com 22 e 8000.
-- [x] Persistência comprovada na EC2; evidências preparadas no rascunho local do README, aguardando publicação.
+- [x] Persistência comprovada na EC2; evidências preparadas no rascunho local do README, publicadas no README.
 
 ## 9. Histórico e aprovação
 

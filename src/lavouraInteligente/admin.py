@@ -1,4 +1,6 @@
 from django.contrib import admin
+from .forms import ProdutorForm
+from .validacao import formatar_documento
 
 from .models import (ArquivoVistoria, DecisaoRecebimento, EventoAuditoria, Fazenda,
                      Lote, LoteTalhao, Produtor, RevisaoStatus, Talhao, Vistoria,
@@ -23,9 +25,14 @@ class LoteTalhaoInline(admin.TabularInline):
 
 @admin.register(Produtor)
 class ProdutorAdmin(admin.ModelAdmin):
-    list_display = ["nome", "documento", "municipio", "uf"]
+    form = ProdutorForm
+    list_display = ["nome", "documento_com_mascara", "municipio", "uf"]
     search_fields = ["nome", "documento"]
     inlines = [FazendaInline]
+
+    @admin.display(description='CPF/CNPJ', ordering='documento')
+    def documento_com_mascara(self, obj):
+        return formatar_documento(obj.documento)
 
 
 @admin.register(Fazenda)

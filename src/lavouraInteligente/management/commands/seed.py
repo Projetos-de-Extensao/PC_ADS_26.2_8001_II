@@ -33,9 +33,9 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         joao, _ = Produtor.objects.get_or_create(
-            documento="123.456.789-00", defaults={"nome": "João Pereira", "municipio": "Cristalina", "uf": "GO"})
+            documento="52998224725", defaults={"nome": "João Pereira", "municipio": "Cristalina", "uf": "GO"})
         maria, _ = Produtor.objects.get_or_create(
-            documento="12.345.678/0001-90", defaults={"nome": "Maria Souza", "municipio": "Altamira", "uf": "PA"})
+            documento="11222333000181", defaults={"nome": "Maria Souza", "municipio": "Altamira", "uf": "PA"})
         fazendas = {
             "Fazenda Santa Rita": (joao, "GO-5205-ABCD", "Cristalina", "GO", "500.00"),
             "Sitio Boa Vista": (joao, "MG-3106-EFGH", "Varginha", "MG", "80.00"),

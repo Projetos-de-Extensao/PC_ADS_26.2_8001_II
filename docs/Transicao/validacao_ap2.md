@@ -4,7 +4,9 @@
 
 Raízes é o nome do produto informado pelo responsável; o case da disciplina é Lavoura Inteligente. O app técnico `lavouraInteligente`, seus modelos e tabelas permanecem identificáveis. A proposta renomeia somente o pacote de configuração `conifg` para `raizes_config`.
 
-## Estado real da EC2
+A [auditoria atual de 12/11/2026](auditoria_roteiro_ap2.md) contém a conferência A1–A8, B1–B8 e Parte C. Abaixo permanecem as evidências históricas de 11/11, com suas contagens e limitações da época.
+
+## Estado histórico da EC2 (11/11)
 
 - Amazon Linux 2023, t3.small, us-east-2, disco EBS de 8 GiB.
 - Diretório ativo: `/home/ec2-user/PC_ADS_26.2_8001_II`; a cópia em `~/lavouraInteligente/PC_ADS_26.2_8001_II` é antiga.
@@ -54,7 +56,7 @@ As imagens de logs são transcrições das saídas reais capturadas via SSH. A i
 ![Testes EC2](../assets/evidencias/07-testes.png)
 ![Restore](../assets/evidencias/10-restore.png)
 
-## O que permanece pendente
+## Pendências registradas em 11/11 (histórico)
 
 1. Registrar o deploy autorizado e as verificações AWS no guia de integrações.
 2. Conferência no console AWS das regras de entrada do SG: SSH restrito ao IP de administração, API 8000 e nenhuma exposição PostgreSQL.
@@ -74,3 +76,7 @@ Preparação técnica assistida por automação, solicitada pelo responsável do
 Portal próprio na raiz `/`, com migrations `0002` e `0003`, volume `media`, consulta
 INPE/DETER e adaptadores AWS. O [guia de integrações](../Construcao/integracoes_aws_ambientais.md)
 registra os limites e as verificações da implantação autorizada.
+
+## Revisão atual de 12/11/2026
+
+O console confirmou o SG somente com portas 22/8000, PostgreSQL sem exposição, professor com acesso admin ao repositório e os três integrantes com commits associados aos seus logins. Foram acrescentadas constraints e máscaras, com 80 testes no PostgreSQL local. Aprovações e apresentação continuam dependendo da equipe. Veja a auditoria atual para os detalhes e evidências.

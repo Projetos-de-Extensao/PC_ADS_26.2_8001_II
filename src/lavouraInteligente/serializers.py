@@ -3,9 +3,26 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from .models import Fazenda, Lote, LoteTalhao, Produtor, Talhao
+from .validacao import normalizar_documento, validar_documento, formatar_documento, DOCUMENTO_DEMO, UFS
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 
-class TalhaoSerializer(serializers.ModelSerializer):
+class CadastroValidadoSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+        for name, value in data.items():
+            field = self.Meta.model._meta.get_field(name)
+            if isinstance(value, str) and not field.blank and not value.strip():
+                raise serializers.ValidationError({name:'Este campo é obrigatório.'})
+        return super().validate(data)
+
+    def to_internal_value(self, data):
+        data = data.copy()
+        if isinstance(data.get('uf'), str):
+            data['uf'] = data['uf'].strip().upper()
+        return super().to_internal_value(data)
+
+
+class TalhaoSerializer(CadastroValidadoSerializer):
     def create(self,validated_data):
         validated_data['status']='REVISAO'
         return super().create(validated_data)
@@ -48,6 +65,11 @@ class TalhaoSerializer(serializers.ModelSerializer):
                         not -74<=point[0]<=-34 or not -34<=point[1]<=6):
                         raise serializers.ValidationError('Informe coordenadas WGS84 no Brasil: longitude, latitude.')
         if count>2000:raise serializers.ValidationError('A geometria ultrapassa o limite de 2.000 vértices.')
+        from .ambiental import geometry
+        try:
+            geometry(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
         return value
 
     class Meta:
@@ -56,7 +78,7 @@ class TalhaoSerializer(serializers.ModelSerializer):
         read_only_fields = ['status']
 
 
-class FazendaSerializer(serializers.ModelSerializer):
+class FazendaSerializer(CadastroValidadoSerializer):
     talhoes = TalhaoSerializer(many=True, read_only=True)
 
     class Meta:
@@ -64,15 +86,36 @@ class FazendaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class ProdutorSerializer(serializers.ModelSerializer):
+class ProdutorSerializer(CadastroValidadoSerializer):
+    documento = serializers.CharField(max_length=18)
+    documento_formatado = serializers.SerializerMethodField()
     fazendas = FazendaSerializer(many=True, read_only=True)
+
+    def get_documento_formatado(self, obj):
+        return formatar_documento(obj.documento)
+
+    def validate_documento(self, value):
+        try:
+            value = normalizar_documento(value)
+            if self.instance and self.instance.simulado and value == DOCUMENTO_DEMO:
+                return value
+            validar_documento(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages)
+        query = Produtor.objects.filter(documento=value)
+        if self.instance:
+            query = query.exclude(pk=self.instance.pk)
+        if query.exists():
+            raise serializers.ValidationError('Já existe um produtor com este CPF/CNPJ, com ou sem pontuação.')
+        return value
 
     class Meta:
         model = Produtor
         fields = "__all__"
+        read_only_fields = ['simulado']
 
 
-class LoteTalhaoSerializer(serializers.ModelSerializer):
+class LoteTalhaoSerializer(CadastroValidadoSerializer):
     talhao_codigo = serializers.CharField(source="talhao.codigo", read_only=True)
 
     def validate(self,data):
@@ -94,7 +137,7 @@ class LoteTalhaoSerializer(serializers.ModelSerializer):
         fields = ["id", "lote", "talhao", "talhao_codigo", "peso_kg"]
 
 
-class LoteSerializer(serializers.ModelSerializer):
+class LoteSerializer(CadastroValidadoSerializer):
     itens = LoteTalhaoSerializer(many=True, read_only=True)
     simulado = serializers.SerializerMethodField()
 

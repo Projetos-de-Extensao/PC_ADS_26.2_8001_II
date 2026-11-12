@@ -1,0 +1,63 @@
+@startuml Raizes_Arquitetura
+left to right direction
+skinparam componentStyle rectangle
+skinparam roundCorner 10
+
+actor "Produtor /\nCooperativa" as User
+actor "Operador da\nbalança" as Balanca
+actor "Piloto de\ndrone" as Piloto
+cloud "Fontes ambientais\nMapBiomas • DETER • Sentinel" as Fontes
+
+package "Frontend" {
+  [CloudFront + S3\nDashboard web] as Front
+}
+
+package "Entrada" {
+  [API Gateway] as APIGW
+  [EventBridge\n(agendamentos e eventos)] as EB
+}
+
+package "Processamento (Lambda)" {
+  [Ingestão e validação] as LIngest
+  [Análise espacial] as LGeo
+  [Motor de decisão] as LDec
+  [Consulta de status] as LStatus
+  [Processamento\nda vistoria] as LDrone
+}
+
+package "Armazenamento" {
+  database "DynamoDB\nstatus e eventos" as DDB
+  database "PostgreSQL + PostGIS\ngeometrias" as PG
+  storage "S3 Data Lake\nhistórico e evidências" as S3
+}
+
+[Athena\nanálise histórica] as Athena
+[SNS\nnotificações] as SNS
+
+User --> Front
+Front --> APIGW
+Balanca --> APIGW
+Piloto --> APIGW : pede link de envio
+Piloto --> S3 : envia imagens\n(link temporário)
+S3 --> EB : upload concluído
+EB --> LDrone
+LDrone --> PG : área coberta
+LDrone --> DDB : vistoria recebida
+LDrone --> SNS : avisa analista
+Fontes --> EB
+APIGW --> LIngest
+APIGW --> LStatus
+EB --> LIngest
+LIngest --> S3
+LIngest --> PG
+LIngest --> EB : novo dado
+EB --> LGeo
+LGeo --> PG
+LGeo --> LDec
+LDec --> DDB
+LDec --> S3 : evidência
+LDec --> SNS : mudança crítica
+LStatus --> DDB
+Athena --> S3
+APIGW ..> Athena : consulta histórica
+@enduml

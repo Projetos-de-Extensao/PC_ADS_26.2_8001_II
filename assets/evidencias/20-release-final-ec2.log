@@ -1,0 +1,37 @@
+ Container src-db-1 Running 
+ Container src-web-1 Recreate 
+ Container src-web-1 Recreated 
+ Container src-integracoes-1 Recreate 
+ Container src-integracoes-1 Recreated 
+ Container src-db-1 Waiting 
+ Container src-db-1 Healthy 
+ Container src-web-1 Starting 
+ Container src-web-1 Started 
+ Container src-integracoes-1 Starting 
+ Container src-integracoes-1 Started 
+curl: (56) Recv failure: Connection reset by peer
+curl: (56) Recv failure: Connection reset by peer
+Found 40 test(s).
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+....Cloud delivery 12 failed (TimeoutError)
+............Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+............Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+............
+----------------------------------------------------------------------
+Ran 40 tests in 5.264s
+
+OK
+Destroying test database for alias 'default'...
+No changes detected
+NAME                IMAGE              COMMAND                  SERVICE       CREATED          STATUS                 PORTS
+src-db-1            postgres:16        "docker-entrypoint.s…"   db            2 hours ago      Up 2 hours (healthy)   5432/tcp
+src-integracoes-1   raizes-web:local   "sh -c 'until python…"   integracoes   28 seconds ago   Up 16 seconds          
+src-web-1           raizes-web:local   "sh -c 'python manag…"   web           39 seconds ago   Up 17 seconds          0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+DEPLOYED_COMMIT=3643253
+LOGIN_HTTP=200
+API_HTTP=200
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p1  8.0G  6.9G  1.1G  87% /

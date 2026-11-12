@@ -1,0 +1,14 @@
+sequenceDiagram
+    autonumber
+    actor An as Analista
+    participant V as TalhaoViewSet
+    participant ORM as Django ORM
+    participant DB as PostgreSQL
+
+    An->>V: GET /api/talhoes/?atributos__contains={"fonte":"DETER"}
+    V->>V: converte o valor com json.loads
+    V->>ORM: Talhao.objects.filter(atributos__contains={...})
+    ORM->>DB: SELECT ... WHERE atributos @> '{"fonte":"DETER"}'
+    DB->>DB: Bitmap Index Scan on talhao_atributos_gin
+    DB-->>V: linhas
+    V-->>An: 200 OK [talhões]

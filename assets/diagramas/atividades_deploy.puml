@@ -1,0 +1,44 @@
+@startuml atividades_deploy
+|Windows (equipe)|
+start
+:Alterar código, models e migrations;
+:Testar localmente
+(docker compose up -d --build
+e manage.py test);
+if (Testes passaram?) then (sim)
+  :git commit e git push;
+else (não)
+  :Corrigir;
+  stop
+endif
+|GitHub|
+:CI "Deploy docs"
+(mkdocs build --strict);
+:Publicar site MkDocs
+(GitHub Pages);
+|EC2 (Amazon Linux 2023)|
+:ssh na instância;
+:scripts/backup_db.sh
+(antes de atualizar);
+:git pull
+(scripts/deploy_ec2.sh);
+if (.env existe?) then (sim)
+else (não)
+  :Gerar .env com segredos
+aleatórios (chmod 600);
+endif
+:docker compose up -d --build;
+:db: postgres:16 + healthcheck;
+:web: bootstrap
+(collectstatic, migrate,
+superusuário, seed);
+:Gunicorn na porta 8000;
+if (GET /api/ responde 200?) then (sim)
+  :Registrar evidências
+(docker ps, logs, psql, API);
+  stop
+else (não)
+  :Executar plano de rollback;
+  stop
+endif
+@enduml

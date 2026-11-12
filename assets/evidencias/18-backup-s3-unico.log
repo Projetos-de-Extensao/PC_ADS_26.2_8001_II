@@ -1,0 +1,16 @@
+Backup gerado: src/backups/lavoura_2026-11-12_0149.sql.gz (12K)
+Backup PostgreSQL enviado ao S3 privado.
+Backup dos arquivos de vistoria enviado ao S3 privado.
+CRON_UNCHANGED
+0 3 * * * /bin/bash /home/ec2-user/PC_ADS_26.2_8001_II/scripts/backup_db.sh >> /home/ec2-user/backup_db.log 2>&1
+BACKUP_REMOTE_OBJECTS
+[
+    {
+        "Key": "backups/media/media_2026-11-12_0149.tar.gz",
+        "Size": 104
+    },
+    {
+        "Key": "backups/postgres/lavoura_2026-11-12_0149.sql.gz",
+        "Size": 10729
+    }
+]

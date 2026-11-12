@@ -1,0 +1,19 @@
+VERSOES
+git version 2.50.1
+Docker version 25.0.14, build 0bab007
+Docker Compose version v5.7.0
+NAME="Amazon Linux"
+VERSION="2023"
+ID="amzn"
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p1  8.0G  5.9G  2.1G  74% /
+NAME                IMAGE              COMMAND                  SERVICE       CREATED        STATUS                  PORTS
+src-db-1            postgres:16        "docker-entrypoint.s…"   db            12 hours ago   Up 12 hours (healthy)   5432/tcp
+src-integracoes-1   raizes-web:local   "sh -c 'until python…"   integracoes   9 hours ago    Up 9 hours
+src-web-1           raizes-web:local   "sh -c 'python manag…"   web           9 hours ago    Up 9 hours              0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+src-integracoes-1 88.96MiB / 1.865GiB
+src-web-1 174.2MiB / 1.865GiB
+src-db-1 61.19MiB / 1.865GiB
+CONFIGURACAO {'DEBUG': False, 'POSTGRES_ENGINE': 'django.db.backends.postgresql', 'SECRET_CONFIGURADA': True, 'ALLOWED_HOSTS_OK': True}
+GIN ('CREATE INDEX talhao_atributos_gin ON public."lavouraInteligente_talhao" USING gin (atributos)',)
+ATRIBUTOS ('jsonb', 'jsonb')

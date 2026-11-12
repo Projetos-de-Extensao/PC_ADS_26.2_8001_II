@@ -1,0 +1,9 @@
+flowchart LR
+    Op([Operador / Analista / Admin]) -- "1: HTTP :8000" --> SG{{Security Group<br/>22 e 8000}}
+    SG -- "2" --> W[container web<br/>Gunicorn + Django + WhiteNoise]
+    W -- "3: SQL :5432<br/>rede interna do Compose" --> D[(container db<br/>PostgreSQL 16)]
+    D -- "4" --> V[(volume pgdata)]
+    W -. "5: .env (SECRET_KEY, POSTGRES_*)" .- E[[.env fora do Git]]
+    B[scripts/backup_db.sh] -- "6: pg_dump" --> D
+    B -- "7: dump local" --> BK[(backups/*.sql.gz)]
+    BK -. "cópia externa planejada, não automatizada" .-> S3[(S3)]

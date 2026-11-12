@@ -1,0 +1,30 @@
+@startuml NetworkSecurity_Classes
+title Pacote Network Security - Classes de Análise
+
+class SecurityGroup {
+  -nome: String
+  -vpcId: String
+  +adicionarRegraEntrada(regra): void
+  +adicionarRegraSaida(regra): void
+}
+
+class Regra {
+  -protocolo: TCP
+  -porta: String
+  -origem: String
+  -acao: Allow
+}
+
+class VPCEndpoint {
+  -servico: S3/DynamoDB/SecretsManager/EventBridge
+  -tipo: Gateway/Interface
+}
+
+class EntradaHTTPS {
+  -servico: CloudFront/API Gateway
+  -versaoMinimaTLS: String
+  -waf: Boolean
+}
+
+SecurityGroup "1" -- "*" Regra : contém
+@enduml

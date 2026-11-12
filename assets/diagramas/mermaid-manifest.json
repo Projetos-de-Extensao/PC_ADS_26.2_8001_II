@@ -1,0 +1,34 @@
+{
+  "arquitetura-mermaid-01.mmd": {
+    "source": "833598fcd57435af69b9852222fe3a0b76dd73ad8f95180040a4f38c115e11f8",
+    "svg": "7ab5a8485568ad58dc8e1214cd55bcea3070a2a79ebbe8c87ad86d259fa76328"
+  },
+  "cua-mermaid-01.mmd": {
+    "source": "16ff78bd5f3f96cd701d4f8d7700cabb5acac114ec4d3726cc6fe487092299a1",
+    "svg": "9e3aa87e5e3a91f5afdb3aa35257c87844b642773344c7af22911bdf3e607d76"
+  },
+  "deploy_ec2_sqlite-mermaid-01.mmd": {
+    "source": "685e497a04864bafa2c3f7054d30e9996f1148433183f9ab4c8e4208a8cff490",
+    "svg": "6db2df37334d9178a27a711177c85d098b71091447bab3d68d7c58fc3c581ede"
+  },
+  "infraestrutura_atual.mmd": {
+    "source": "f9dbdb44995fba0f1ed4f046dfd76dcef615c70c6321b8d1d2da6c399d1635d7",
+    "svg": "450da1a3d7c0c1d0c26a99e85f9aa7b077b4070a3e8247e12c33378d9834e1af"
+  },
+  "seq_com-mermaid-01.mmd": {
+    "source": "a54e00b40e75c6e36177570a0224314d019a9c2df692ff16fdb190d2abd3699f",
+    "svg": "174bb809955c2e1cf6380c81efece84600b81b9aa6857ee0bd60cf71c683625c"
+  },
+  "seq_com-mermaid-02.mmd": {
+    "source": "25f55f90ba7089a0d3e64b791ac60be3194e5148673ae6aa434bcc2c73eaefcf",
+    "svg": "b2b4ad47cc8fd3602c3100a0fe5ab139bbcc3fc4f12298811bbf2e30bdbc5633"
+  },
+  "seq_com-mermaid-03.mmd": {
+    "source": "51096ae7dfae021f480db8fb871adb398e7f46e3e40f231c7b889e240352190c",
+    "svg": "0b83750d48ad32a0a5f410c99677311f5c1fc2f600c88e7c03296319a7fe1a54"
+  },
+  "seq_com-mermaid-04.mmd": {
+    "source": "d32046f38eb3716dd795b2939c0de17e44c5f82c32f297b256499802b1833a86",
+    "svg": "68bf365a44bcb5c33f4428fa14180464231e835a1cff12f97c28c15466d57522"
+  }
+}

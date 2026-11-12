@@ -1,0 +1,21 @@
+flowchart TB
+  B["Navegador · frontend HTML/CSS/JS"] -->|"HTTP :8000 · sessão e CSRF"| W
+  subgraph EC2["EC2 · Amazon Linux · Docker Compose"]
+    W["web · Gunicorn + Django + WhiteNoise"]
+    PG[("db · PostgreSQL 16")]
+    K["integracoes · worker Python"]
+    V[("volume pgdata")]
+    M[("volume media")]
+    W -->|"regras, cadastros e transações"| PG
+    PG --- V
+    W --- M
+    K -->|"lê outbox e grava análises"| PG
+  end
+  K -->|"consulta pública · áreas operacionais"| I["INPE/DETER real"]
+  W --> L["Laboratório: dados sintéticos e voos virtuais"]
+  L --> PG
+  K -->|"snapshots e auditoria JSON"| S[("S3 privado e versionado")]
+  K -->|"projeção de status"| D[("DynamoDB")]
+  K -->|"publicação de eventos"| N["SNS · sem destinatários automáticos"]
+  R["Função IAM da EC2 · credenciais temporárias"] -.-> K
+  G["GitHub · commits + Actions + Pages"] -->|"git pull e build"| W

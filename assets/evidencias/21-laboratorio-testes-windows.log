@@ -1,0 +1,18 @@
+Creating test database for alias 'default'...
+
+....Cloud delivery 12 failed (TimeoutError)
+..........................................................
+----------------------------------------------------------------------
+Ran 62 tests in 13.160s
+
+OK
+Destroying test database for alias 'default'...
+
+Found 62 test(s).
+System check identified no issues (0 silenced).
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+Perfis disponíveis. Atribua grupos aos usuários no Admin.
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.
+Seed ok: 2 produtores, 3 fazendas, 4 talhões, 1 lotes.

@@ -1,0 +1,49 @@
+@startuml pacotes_release1
+skinparam packageStyle rectangle
+left to right direction
+
+package "Infraestrutura" as INF {
+  [Dockerfile]
+  [docker-compose.yml]
+  [scripts/deploy_ec2.sh]
+  [scripts/backup_db.sh]
+}
+
+package "Segurança" as SEG {
+  [.env / .env.example]
+  [Security Group 22 e 8000]
+  [settings por variáveis]
+}
+
+package "raizes_config (projeto Django)" as CFG {
+  [settings.py]
+  [urls.py]
+  [wsgi.py]
+}
+
+package "API (DRF)" as API {
+  [views.py: ViewSets]
+  [serializers.py]
+}
+
+package "lavouraInteligente (app)" as APP {
+  [models.py]
+  [admin.py]
+  [management: bootstrap, seed]
+  [tests.py]
+}
+
+package "Dados (PostgreSQL 16)" as DAT {
+  [tabelas relacionais]
+  [JSONB + índice GIN]
+  [volume pgdata]
+}
+
+API --> APP : usa models
+CFG --> API : rotas /api/
+CFG --> SEG : lê .env
+APP --> DAT : ORM / migrations
+INF --> CFG : executa (Gunicorn)
+INF --> DAT : container db
+INF --> SEG : gera .env (chmod 600)
+@enduml

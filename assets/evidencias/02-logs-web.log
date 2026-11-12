@@ -1,0 +1,12 @@
+web-1  | Operations to perform:
+web-1  |   Apply all migrations: admin, auth, contenttypes, lavouraInteligente, sessions
+web-1  | Running migrations:
+web-1  |   No migrations to apply.
+web-1  | Seed ok: 2 produtores, 3 fazendas, 4 talhões, 2 lotes.
+web-1  | [2026-11-11 23:37:20 +0000] [9] [INFO] Starting gunicorn 26.2.0
+web-1  | [2026-11-11 23:37:20 +0000] [9] [INFO] Listening at: http://0.0.0.0:8000 (9)
+web-1  | [2026-11-11 23:37:20 +0000] [9] [INFO] Using worker: sync
+web-1  | [2026-11-11 23:37:20 +0000] [10] [INFO] Booting worker with pid: 10
+web-1  | [2026-11-11 23:37:20 +0000] [11] [INFO] Booting worker with pid: 11
+web-1  | [2026-11-11 23:37:20 +0000] [12] [INFO] Booting worker with pid: 12
+web-1  | [2026-11-11 23:37:20 +0000] [9] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl

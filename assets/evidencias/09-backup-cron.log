@@ -1,0 +1,8 @@
+Backup gerado: src/backups/lavoura_2026-11-11_2347.sql.gz (8.0K)
+Copie para fora da EC2 (ex.: aws s3 cp src/backups/lavoura_2026-11-11_2347.sql.gz s3://<bucket>/) para não perder junto com a instância.
+0 3 * * * /bin/bash /home/ec2-user/PC_ADS_26.2_8001_II/scripts/backup_db.sh >> /home/ec2-user/backup_db.log 2>&1
+total 32K
+-rw-rw-r--. 1 ec2-user ec2-user 5.3K Nov 10 14:08 lavoura_2026-11-10_1408.sql.gz
+-rw-r--r--. 1 ec2-user ec2-user 5.6K Nov 11 23:36 lavoura_2026-11-11_2336.sql.gz
+-rw-rw-r--. 1 ec2-user ec2-user 5.6K Nov 11 23:41 lavoura_2026-11-11_2341.sql.gz
+-rw-rw-r--. 1 ec2-user ec2-user 5.7K Nov 11 23:47 lavoura_2026-11-11_2347.sql.gz

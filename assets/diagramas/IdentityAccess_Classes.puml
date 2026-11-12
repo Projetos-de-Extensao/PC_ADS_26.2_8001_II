@@ -1,0 +1,51 @@
+@startuml IdentityAccess_Classes
+title Pacote Identity & Access - Classes de Análise
+
+class Usuario {
+  -id: String
+  -nome: String
+  -email: String
+  -perfil: Admin/Produtor/Analista/Operador/Piloto/Gestor/Auditor
+  -escopo: List<CooperativaId>
+  -mfaHabilitado: Boolean
+  +autenticar(): Token
+  +autorizar(recurso, acao): Boolean
+}
+
+class Grupo {
+  -nome: String
+  -permissoes: List<String>
+}
+
+class IAMRole {
+  -nome: String
+  -funcaoLambda: String
+  +assumirRole(): Credentials
+}
+
+class IAMPolicy {
+  -nome: String
+  -documento: JSON
+  -efeito: Allow/Deny
+}
+
+class CredencialBalanca {
+  -cooperativaId: String
+  -status: Ativa/Revogada
+  -limiteRequisicoes: Integer
+  +revogar(): void
+  +rotacionar(): void
+}
+
+class LinkUpload {
+  -vistoriaId: String
+  -pilotoId: String
+  -prefixoS3: String
+  -expiraEm: DateTime
+  +gerar(): URL
+}
+
+Usuario "*" -- "1" Grupo : pertence
+Usuario "1" -- "*" LinkUpload : solicita
+IAMRole "1" -- "*" IAMPolicy : possui
+@enduml

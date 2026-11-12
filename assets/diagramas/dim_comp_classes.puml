@@ -1,0 +1,50 @@
+@startuml dim_comp_classes
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Fronteira (API DRF)" {
+  class LoteViewSet <<boundary>> {
+    +receber(request)
+  }
+  class TalhaoViewSet <<boundary>> {
+    +get_queryset()
+  }
+  class "Produtor/FazendaViewSet" as CadViewSet <<boundary>>
+}
+
+package "Controle (regras)" {
+  class RecebimentoSerializer <<control>> {
+    +validate_codigo()
+  }
+  class "transaction.atomic" as Tx <<control>>
+}
+
+package "Entidade (PostgreSQL)" {
+  class Produtor <<entity>>
+  class Fazenda <<entity>>
+  class Talhao <<entity>> {
+    atributos : JSONB (GIN)
+    poligono : JSONB
+    status
+  }
+  class Lote <<entity>> {
+    status
+    motivo
+  }
+  class LoteTalhao <<entity>> {
+    peso_kg
+  }
+}
+
+LoteViewSet --> RecebimentoSerializer : valida entrada
+LoteViewSet --> Tx : grava Lote + itens
+Tx --> Lote
+Tx --> LoteTalhao
+TalhaoViewSet --> Talhao : atributos @> {...}
+CadViewSet --> Produtor
+CadViewSet --> Fazenda
+Produtor "1" -- "*" Fazenda
+Fazenda "1" -- "*" Talhao
+Lote "1" -- "*" LoteTalhao
+Talhao "1" -- "*" LoteTalhao
+@enduml

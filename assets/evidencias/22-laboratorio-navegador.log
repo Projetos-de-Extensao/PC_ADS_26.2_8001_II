@@ -1,0 +1,16 @@
+Validação de interface em 11/11/2026, America/Sao_Paulo.
+Ambiente: servidor de QA local, PostgreSQL separado, dados fictícios.
+
+Login de QA e carregamento do Laboratório: OK.
+Criação de cenário Alerta próximo: talhão DEMO-BD172951F5, status REVISAO.
+Fontes DETER/MapBiomas/Sentinel marcadas como simulação: OK.
+Início de voo com cobertura insuficiente: OK.
+Envio de 3/10 partes e recarregamento da página: 3/10 preservadas.
+Retomada e envio das 10 partes: OK.
+Validação do voo: REJEITADO, cobertura calculada de 60%.
+Novo voo válido e envio completo: VALIDADO, cobertura calculada de 98%.
+Revisão humana com justificativa: APROVADO; evidência original preservada.
+Guia Como funciona: infraestrutura atual e equivalentes da arquitetura-alvo acessíveis.
+Navegação para o guia retorna ao topo; largura do conteúdo não excede a janela.
+Nenhuma imagem de drone foi capturada ou enviada. 5 GiB são tamanho declarado;
+as partes do exercício são metadados, com zero bytes reais de imagem transferidos.

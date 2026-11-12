@@ -1,0 +1,13 @@
+flowchart LR
+    Prod([Produtor / Cooperativa]) --> UC2[UC-FUN-002<br/>Gerenciar cadastros]
+    Adm([Administrador]) --> UC1[UC-FUN-001<br/>Autenticar - Django Admin]
+    Adm --> UC2
+    Op([Operador da balança]) --> UC6[UC-FUN-006<br/>Consultar status na balança]
+    An([Analista]) --> UC7[UC-FUN-007<br/>Revisar status]
+    An --> UC9[UC-FUN-009<br/>Consultar talhões por atributo]
+    UC6 -. inclui .-> UC5[UC-FUN-005<br/>Avaliar pior status do lote]
+    UC2 --> API[(API DRF + PostgreSQL)]
+    UC6 --> API
+    UC7 --> API
+    UC9 --> API
+    UC1 --> API

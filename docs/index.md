@@ -3,26 +3,25 @@ hide:
     - toc
 ---
 
-# Lavoura Inteligente
+# Raízes
 
 **Rastreabilidade Agrícola e Conformidade EUDR** — Case 6: AgTech<br>
 Disciplina IBM8936 · Turma PC_ADS_26.2_8001_II
 
-A Lavoura Inteligente consolida dados de produtores, talhões, fontes ambientais e
-eventos de recebimento para manter um **status de risco atualizado** de cada área. Quando
-um lote chega à cooperativa, a balança consulta um status já calculado e recebe, em
-poucos segundos, uma resposta: **APROVADO**, **REVISÃO** ou **BLOQUEADO** — sempre com
-motivo e evidências.
+A **Release 1 da AP2** é uma API Django REST com PostgreSQL 16 (relacional + JSONB e GIN), Gunicorn e Docker Compose em uma EC2 t3.small. Ela cadastra produtores, fazendas, talhões e lotes, filtra atributos JSON e recebe lotes em transação com rollback.
 
-O satélite vigia todos os talhões todos os dias. Quando ele deixa dúvida, um **drone**
-vai até o talhão, tira imagens de alta resolução e o analista decide com base nelas.
+- [API pública](http://18.117.197.72:8000/api/)
+- [Django Admin](http://18.117.197.72:8000/admin/)
+- [Validação e evidências da AP2](Transicao/validacao_ap2.md)
+- [Procedimento de deploy PostgreSQL](Construcao/deploy_ec2_postgres.md)
 
-> Pergunta central: *"Este lote tem origem rastreável e evidências suficientes para ser
-> aceito sem gerar risco de conformidade?"*
+A proposta local inclui agora o [frontend operacional do Raízes](Construcao/frontend_raizes.md),
+com telas próprias de login, painel/mapa, cadastros, balança, revisão de status, vistorias
+e histórico. Ele utiliza o mesmo Django e PostgreSQL, com registros persistidos. Ainda
+aguarda revisão e autorização de publicação; o ambiente público continua na versão
+anterior.
 
-O projeto usa a regulamentação europeia contra desmatamento (EUDR) como motivação de
-negócio e uma arquitetura serverless orientada a eventos na AWS, dentro de um orçamento
-de até **US$ 1.500,00/mês**.
+A arquitetura completa de satélite, drones, análise geoespacial, eventos e auditoria é a evolução planejada. Esses serviços não estão implantados na Release 1. A API acadêmica permite acesso sem autenticação; o Admin exige login.
 
 <div class="module-cards grid four-cols">
     <div class="card module-card">
@@ -63,7 +62,7 @@ de até **US$ 1.500,00/mês**.
 | Caique Rechuan |
 | Joao Gabriel Meirelles |
 
-## Arquitetura na AWS
+## Arquitetura-alvo na AWS (evolução futura)
 
 | Serviço | Papel |
 | -- | -- |

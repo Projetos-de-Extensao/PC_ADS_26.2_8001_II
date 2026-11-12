@@ -1,0 +1,9 @@
+Login e dashboard com dados do PostgreSQL: OK
+Cadastro real de produtor, fazenda e talhão com importação GeoJSON: OK
+Solicitação, agendamento e upload de vistoria com hash: OK
+Revisão humana salva com justificativa e evidência original: OK
+Recebimento transacional, decisão do operador e exportação íntegra: OK
+Erro de pesos exibido ao operador e rollback sem lote parcial: OK
+Filtros de status/busca e histórico persistido com autoria: OK
+Layout móvel (390 px) sem overflow horizontal: OK
+Erros JavaScript de página: 0

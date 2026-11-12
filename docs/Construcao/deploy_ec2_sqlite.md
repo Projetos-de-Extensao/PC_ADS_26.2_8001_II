@@ -1,5 +1,9 @@
 # Deploy Django API em Docker na EC2 (SQLite)
 
+!!! info "Escopo da entrega AP2"
+    Referência histórica do roteiro 13. O deploy atual usa PostgreSQL; siga a página Deploy EC2 + Docker (PostgreSQL). Os exemplos genéricos desta página não descrevem a aplicação publicada.
+
+
 !!! warning "Roteiro histórico (SQLite)"
     Este é o roteiro 13, que levou a API à EC2 ainda com SQLite. **O projeto já migrou para PostgreSQL**: para o deploy atual use o [Deploy com PostgreSQL](deploy_ec2_postgres.md) ou o script `scripts/deploy_ec2.sh`. As seções de instalação do Docker, do Compose e do Buildx (Parte 7, I a V) continuam valendo.
 
@@ -24,12 +28,9 @@ Resultado: endpoint `http://localhost:8000/api/tarefas/` funcionando em containe
 | 3. Sincronizar | **GitHub → EC2** | Parte 6: `git clone`/`git pull` na EC2 |
 | 4. Deploy | **EC2 (Docker)** | Parte 7: `docker compose up -d --build` e teste pelo IP público |
 
-```mermaid
-flowchart LR
-    A[Windows<br/>desenvolve e testa] -->|git push| B[GitHub]
-    B -->|git pull| C[EC2 AWS]
-    C -->|docker compose up| D[Container em execução]
-```
+![Diagrama deploy_ec2_sqlite-mermaid-01](../assets/diagramas/deploy_ec2_sqlite-mermaid-01.svg)
+
+[Fonte Mermaid](../assets/diagramas/deploy_ec2_sqlite-mermaid-01.mmd)
 
 Regra: o código é alterado **somente no Windows**. A EC2 apenas recebe as mudanças via Git e executa o deploy.
 

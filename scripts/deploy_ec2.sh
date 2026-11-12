@@ -84,8 +84,32 @@ else
       -e "s|^DJANGO_SUPERUSER_PASSWORD=.*|DJANGO_SUPERUSER_PASSWORD=${ADMIN_PASS}|" \
       .env.example > .env
   chmod 600 .env
-  echo ".env criado (permissão 600). Senha do admin do Django: ${ADMIN_PASS}"
+  echo ".env criado (permissão 600). Consulte a senha do Admin somente no arquivo privado."
   echo "Guarde essa senha; ela também fica em $APP_DIR/src/.env"
+fi
+
+# Uma EC2 sem Elastic IP pode mudar de endereço após parar/iniciar.
+# Inclua o host atual e preserve os valores personalizados e os segredos existentes.
+IP_ATUAL=$(ip_publico)
+if [ -n "$IP_ATUAL" ]; then
+  python3 - "$IP_ATUAL" <<'PYHOST'
+from pathlib import Path
+import sys
+p = Path('.env')
+lines = p.read_text().splitlines()
+additions = {'ALLOWED_HOSTS': sys.argv[1], 'CSRF_TRUSTED_ORIGINS': 'http://' + sys.argv[1] + ':8000'}
+for i, line in enumerate(lines):
+    key, sep, value = line.partition('=')
+    if key in additions and sep:
+        values = [v.strip() for v in value.split(',') if v.strip()]
+        item = additions.pop(key)
+        if item not in values:
+            values.append(item)
+        lines[i] = key + '=' + ','.join(values)
+lines.extend(key + '=' + value for key, value in additions.items())
+p.write_text('\n'.join(lines) + '\n')
+p.chmod(0o600)
+PYHOST
 fi
 
 passo "5/6 Build e subida dos containers (web + db)"

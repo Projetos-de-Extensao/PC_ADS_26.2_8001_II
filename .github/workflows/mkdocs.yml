@@ -18,6 +18,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      - run: python scripts/render_diagrams.py --check
       - run: mkdocs build --strict
 
   deploy:

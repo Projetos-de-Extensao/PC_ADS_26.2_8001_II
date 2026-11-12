@@ -1,0 +1,54 @@
+@startuml Raizes_CasosDeUso
+left to right direction
+skinparam actorStyle awesome
+
+actor Administrador as Admin
+actor "Produtor /\nCooperativa" as Prod
+actor "Analista de\nconformidade" as Analista
+actor "Operador da\nbalanca" as Op
+actor Gestor as Gest
+actor Auditor as Audit
+actor "Fonte ambiental" as Fonte
+actor "Canal de notificacao" as Canal
+actor "Piloto de\ndrone" as Piloto
+
+rectangle "Raízes" {
+  usecase "UC-FUN-001\nAutenticar e autorizar" as UC1
+  usecase "UC-FUN-002\nGerenciar cadastros" as UC2
+  usecase "UC-FUN-003\nEnviar poligono do talhao" as UC3
+  usecase "UC-FUN-004\nIngerir dados ambientais" as UC4
+  usecase "UC-FUN-005\nCalcular status de risco" as UC5
+  usecase "UC-FUN-006\nConsultar status na balanca" as UC6
+  usecase "UC-FUN-007\nRevisar status" as UC7
+  usecase "UC-FUN-008\nNotificar mudanca de status" as UC8
+  usecase "UC-FUN-009\nConsultar historico e mapa" as UC9
+  usecase "UC-FUN-010\nGerar pacote auditavel" as UC10
+  usecase "UC-FUN-011\nSolicitar vistoria por drone" as UC11
+  usecase "UC-FUN-012\nEnviar imagens da vistoria" as UC12
+}
+
+Admin --> UC1
+Admin --> UC2
+Prod --> UC1
+Prod --> UC2
+Prod --> UC3
+Analista --> UC1
+Analista --> UC7
+Analista --> UC9
+Op --> UC1
+Op --> UC6
+Gest --> UC1
+Gest --> UC9
+Audit --> UC1
+Audit --> UC10
+Fonte --> UC4
+UC8 --> Canal
+UC4 ..> UC5 : dispara
+UC3 ..> UC5 : dispara
+UC5 ..> UC8 : dispara
+Analista --> UC11
+Piloto --> UC1
+Piloto --> UC12
+UC7 ..> UC11 : pode pedir
+UC12 ..> UC7 : evidencia
+@enduml

@@ -5,7 +5,11 @@ title: Documento de Arquitetura
 
 # Documento de Arquitetura (v1.2)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
+!!! info "Escopo da entrega AP2"
+    A Release 1 usa Django, Gunicorn e PostgreSQL em uma única EC2. API Gateway, Lambda, DynamoDB, RDS/PostGIS, S3 e drones são evolução arquitetural, não serviços comprovados no deploy desta entrega.
+
+
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
 **Data**: 01/10/2026<br>
 **Status**: Em revisão
@@ -27,71 +31,9 @@ perto.
 
 ## 2. Diagrama de alto nível
 
-```plantuml
-@startuml LavouraInteligente_Arquitetura
-left to right direction
-skinparam componentStyle rectangle
-skinparam roundCorner 10
+![Diagrama Raizes_Arquitetura](../assets/diagramas/Raizes_Arquitetura.svg)
 
-actor "Produtor /\nCooperativa" as User
-actor "Operador da\nbalança" as Balanca
-actor "Piloto de\ndrone" as Piloto
-cloud "Fontes ambientais\nMapBiomas • DETER • Sentinel" as Fontes
-
-package "Frontend" {
-  [CloudFront + S3\nDashboard web] as Front
-}
-
-package "Entrada" {
-  [API Gateway] as APIGW
-  [EventBridge\n(agendamentos e eventos)] as EB
-}
-
-package "Processamento (Lambda)" {
-  [Ingestão e validação] as LIngest
-  [Análise espacial] as LGeo
-  [Motor de decisão] as LDec
-  [Consulta de status] as LStatus
-  [Processamento\nda vistoria] as LDrone
-}
-
-package "Armazenamento" {
-  database "DynamoDB\nstatus e eventos" as DDB
-  database "PostgreSQL + PostGIS\ngeometrias" as PG
-  storage "S3 Data Lake\nhistórico e evidências" as S3
-}
-
-[Athena\nanálise histórica] as Athena
-[SNS\nnotificações] as SNS
-
-User --> Front
-Front --> APIGW
-Balanca --> APIGW
-Piloto --> APIGW : pede link de envio
-Piloto --> S3 : envia imagens\n(link temporário)
-S3 --> EB : upload concluído
-EB --> LDrone
-LDrone --> PG : área coberta
-LDrone --> DDB : vistoria recebida
-LDrone --> SNS : avisa analista
-Fontes --> EB
-APIGW --> LIngest
-APIGW --> LStatus
-EB --> LIngest
-LIngest --> S3
-LIngest --> PG
-LIngest --> EB : novo dado
-EB --> LGeo
-LGeo --> PG
-LGeo --> LDec
-LDec --> DDB
-LDec --> S3 : evidência
-LDec --> SNS : mudança crítica
-LStatus --> DDB
-Athena --> S3
-APIGW ..> Athena : consulta histórica
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/Raizes_Arquitetura.puml)
 
 ## 3. Papel de cada serviço
 
@@ -287,21 +229,9 @@ O valor final deve ser validado na AWS Pricing Calculator com o cenário de refe
 
 Antes da arquitetura serverless acima, a equipe entregou um MVP executável em uma EC2:
 
-```mermaid
-flowchart LR
-    U([Usuários e balança]) -->|HTTP :8000| SG{{Security Group<br/>22 e 8000}}
-    subgraph EC2[EC2 t3.small - Amazon Linux 2023]
-      subgraph Compose[Docker Compose]
-        W[web<br/>Django + DRF + Gunicorn + WhiteNoise]
-        D[(db<br/>PostgreSQL 16)]
-      end
-      V[(volume pgdata)]
-    end
-    SG --> W
-    W -->|rede interna| D
-    D --- V
-    GH[GitHub] -->|git pull| EC2
-```
+![Diagrama arquitetura-mermaid-01](../assets/diagramas/arquitetura-mermaid-01.svg)
+
+[Fonte Mermaid](../assets/diagramas/arquitetura-mermaid-01.mmd)
 
 | Camada da arquitetura-alvo | Na Release 1 |
 | -- | -- |
@@ -324,5 +254,5 @@ e [Estratégias de Deploy](../Transicao/ativ_deploy.md).
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Arquiteto de Soluções | | | Pendente |
-| Professor responsável | | | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

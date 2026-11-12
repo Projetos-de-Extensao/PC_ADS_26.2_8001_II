@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    actor Dev as Desenvolvedor (Windows)
+    participant GH as GitHub
+    participant EC2 as EC2 (Amazon Linux 2023)
+    participant C as Docker Compose
+    participant W as container web
+    participant D as container db
+
+    Dev->>Dev: altera código e testa (docker compose up -d --build)
+    Dev->>GH: git push
+    GH-->>GH: CI "Deploy docs" (mkdocs build --strict)
+    Dev->>EC2: ssh
+    EC2->>GH: git pull (ou scripts/deploy_ec2.sh)
+    EC2->>C: docker compose up -d --build
+    C->>D: inicia postgres:16 (volume pgdata)
+    D-->>C: healthcheck pg_isready OK
+    C->>W: inicia web (depends_on: service_healthy)
+    W->>W: manage.py bootstrap (collectstatic, migrate, superusuário, seed)
+    W->>D: migrations
+    W->>W: gunicorn :8000
+    Dev->>W: GET http://IP:8000/api/ → 200

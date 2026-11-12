@@ -1,13 +1,3 @@
-# Construção
+# Organização do trabalho
 
-> Objetivo: Construir o sistema com base na arquitetura definida.
-
-## Principais atividades
-
-* Desenvolver os componentes e funcionalidades do sistema.
-
-* Realizar testes de integração e sistema.
-
-* Iterações para entregar versões parciais e funcionais do software.
-
-* Produto principal: Software em funcionamento, pronto para ser entregue.
+O grupo acompanha a AP2 pelo checklist da entrega e pelos commits do repositório. Cada integrante deve usar sua própria conta e autoria real; não se fabricam commits para cumprir presença. A associação dos membros e do professor deve ser conferida no GitHub por um administrador da organização.

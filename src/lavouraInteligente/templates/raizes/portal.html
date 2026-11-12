@@ -1,0 +1,48 @@
+{% load static %}<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><link rel="icon" type="image/svg+xml" href="{% static 'raizes/marca.svg' %}"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#183e2c"><title>Raízes · Rastreabilidade agrícola</title><link rel="stylesheet" href="{% static 'raizes/portal.css' %}"><script src="{% static 'raizes/portal.js' %}" defer></script></head>
+<body>
+<svg class="sprite" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15"/></symbol>
+<symbol id="i-leaf" viewBox="0 0 24 24"><path d="M19 3C7 2 2 8 6 15c4 7 15 2 13-12ZM5 21 16 8m-6 6 1-5m-1 5 5 1"/></symbol>
+<symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 5h11v12H3V5Zm11 5h4l3 4v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-4a6 6 0 0 1 12 0v4m1-16a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/></symbol>
+<symbol id="i-farm" viewBox="0 0 24 24"><path d="m3 11 9-7 9 7v10H3V11Zm6 10v-7h6v7m-3-17V1m-7 7V4h4"/></symbol>
+<symbol id="i-drone" viewBox="0 0 24 24"><path d="m8 8 8 8m0-8-8 8M9 9h6v6H9z"/><circle cx="5" cy="5" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-2-4V9a5 5 0 0 0-10 0v4l-2 4Zm5 4h4"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3Zm0 6v5m0 3v1"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M5 2h9l5 5v15H5V2Zm9 0v6h5M8 12h8m-8 4h8"/></symbol>
+</defs></svg>
+<button id="mobile-menu" class="icon-button mobile-menu" aria-label="Abrir navegação"><svg><use href="#i-grid"/></svg></button>
+<aside class="sidebar" id="sidebar">
+ <a class="brand" href="#inicio"><span class="brand-mark"><svg><use href="#i-leaf"/></svg></span><span>raízes<span class="brand-sub">RASTREABILIDADE AGRÍCOLA</span></span></a>
+ <div class="workspace"><span class="workspace-logo">RC</span><div><strong>Operação da cooperativa</strong><small>Gestão de origens</small></div></div>
+ <span class="nav-caption">ACOMPANHAMENTO</span>
+ <nav aria-label="Navegação principal">
+  <a href="#inicio" data-route="inicio"><svg><use href="#i-grid"/></svg>Visão geral</a>
+  <a href="#talhoes" data-route="talhoes"><svg><use href="#i-map"/></svg>Talhões e mapa<span class="nav-count" id="nav-talhao-count">—</span></a>
+  <a href="#lotes" data-route="lotes"><svg><use href="#i-truck"/></svg>Recepção de lotes</a>
+  <span class="nav-caption">GESTÃO</span>
+  <a href="#produtores" data-route="produtores"><svg><use href="#i-users"/></svg>Produtores</a>
+  <a href="#fazendas" data-route="fazendas"><svg><use href="#i-farm"/></svg>Fazendas</a>
+  <a href="#vistorias" data-route="vistorias"><svg><use href="#i-drone"/></svg>Vistorias</a>
+  <a href="#integracoes" data-route="integracoes"><svg><use href="#i-leaf"/></svg>Monitoramento ambiental</a>
+  <a href="#historico" data-route="historico"><svg><use href="#i-clock"/></svg>Histórico e evidências</a>
+ </nav>
+ <div class="sidebar-bottom"><div class="connection"><i></i><span id="connection-label">Conectando ao sistema</span></div><p>Cada origem conta.<br>Cada decisão fica registrada.</p><a href="/admin/">Administração do sistema <span>↗</span></a></div>
+</aside>
+<div class="app-shell">
+ <header class="topbar"><div class="breadcrumb">Raízes <span>/</span> <strong id="breadcrumb">Visão geral</strong></div><div class="topbar-tools"><label class="global-search"><svg><use href="#i-search"/></svg><input id="global-search" type="search" placeholder="Buscar um talhão, fazenda..." aria-label="Buscar um talhão ou fazenda"><kbd>↵</kbd></label><button class="icon-button notification-button" id="notifications" aria-label="Ver atualizações"><svg><use href="#i-bell"/></svg><i id="notification-dot" hidden></i></button><div class="profile"><span id="profile-initials">EQ</span><div><strong id="profile-name">Equipe</strong><small id="profile-role">Cooperativa</small></div></div><form action="/sair/" method="post">{% csrf_token %}<button class="logout" type="submit">Sair</button></form></div></header>
+ <main id="main" tabindex="-1"><div class="loading"><span class="spinner"></span><h1>Preparando sua visão de campo</h1><p>Carregando os dados da cooperativa.</p></div></main>
+ <footer class="app-footer"><span>Raízes · Rastreabilidade agrícola</span><span>Classificação de risco operacional. Não constitui certificação jurídica.</span></footer>
+</div>
+<dialog id="modal" class="modal"><div id="modal-content"></div></dialog>
+<div id="drawer-backdrop" class="drawer-backdrop" hidden></div><aside id="drawer" class="drawer" hidden aria-label="Detalhes do talhão"></aside>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+</body></html>

@@ -1,0 +1,4 @@
+flowchart LR
+    A[Windows<br/>desenvolve e testa] -->|git push| B[GitHub]
+    B -->|git pull| C[EC2 AWS]
+    C -->|docker compose up| D[Container em execução]

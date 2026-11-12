@@ -1,9 +1,9 @@
 ---
 repo_url: https://github.com/Projetos-de-Extensao/PC_ADS_26.2_8001_II
 site_url: https://projetos-de-extensao.github.io/PC_ADS_26.2_8001_II/
-site_author: Equipe Lavoura Inteligente
-site_name: PC_ADS_26.2_8001_II
-copyright: Copyright © 2026, Equipe Lavoura Inteligente
+site_author: Equipe Raízes
+site_name: Raízes — AP2
+copyright: Copyright © 2026, Equipe Raízes
 
 nav:
   - Home: index.md
@@ -27,9 +27,12 @@ nav:
       - CodeSpace: Construcao/codespace.md
       - Deploy EC2 + Docker (SQLite): Construcao/deploy_ec2_sqlite.md
       - Deploy EC2 + Docker (PostgreSQL): Construcao/deploy_ec2_postgres.md
+      - Frontend Raízes: Construcao/frontend_raizes.md
+      - Integrações AWS e ambientais: Construcao/integracoes_aws_ambientais.md
   - Transição:
       - Index: Transicao/index.md
       - Estratégias de Deploy: Transicao/ativ_deploy.md
+      - Validação da AP2: Transicao/validacao_ap2.md
 
 extra_css:
   - css/extra.css
@@ -69,9 +72,6 @@ markdown_extensions:
       permalink: true
 
 plugins:
-  - plantuml:
-      puml_url: https://www.plantuml.com/plantuml/
-      puml_keyword: plantuml
   - minify:
       minify_html: true
   - search

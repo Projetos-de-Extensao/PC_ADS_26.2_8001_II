@@ -1,6 +1,8 @@
 from django.contrib import admin
 
-from .models import Fazenda, Lote, LoteTalhao, Produtor, Talhao
+from .models import (ArquivoVistoria, DecisaoRecebimento, EventoAuditoria, Fazenda,
+                     Lote, LoteTalhao, Produtor, RevisaoStatus, Talhao, Vistoria,
+                     AnaliseAmbiental, EntregaCloud)
 
 
 class FazendaInline(admin.TabularInline):
@@ -51,3 +53,19 @@ class LoteAdmin(admin.ModelAdmin):
 @admin.register(LoteTalhao)
 class LoteTalhaoAdmin(admin.ModelAdmin):
     list_display = ["lote", "talhao", "peso_kg"]
+
+# Identidade do produto; os identificadores das tabelas existentes são preservados.
+admin.site.site_header = "Raízes — Rastreabilidade Agrícola"
+admin.site.site_title = "Raízes"
+admin.site.index_title = "Administração do Raízes"
+
+@admin.register(EventoAuditoria, RevisaoStatus, DecisaoRecebimento, ArquivoVistoria, AnaliseAmbiental, EntregaCloud)
+class RegistroPreservadoAdmin(admin.ModelAdmin):
+    def has_add_permission(self,request): return False
+    def has_change_permission(self,request,obj=None): return False
+    def has_delete_permission(self,request,obj=None): return False
+
+@admin.register(Vistoria)
+class VistoriaAdmin(admin.ModelAdmin):
+    list_display=['id','talhao','status','prazo','solicitante']
+    list_filter=['status']

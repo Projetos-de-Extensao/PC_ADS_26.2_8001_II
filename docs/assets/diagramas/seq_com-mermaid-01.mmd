@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor Op as Operador da balança
+    participant G as Gunicorn (web)
+    participant V as LoteViewSet.receber
+    participant S as RecebimentoSerializer
+    participant DB as PostgreSQL (db)
+
+    Op->>G: POST /api/lotes/receber/ {codigo, peso_total_kg, itens[]}
+    G->>V: requisição
+    V->>S: is_valid()
+    S->>DB: SELECT lote por código / talhões por id
+    alt entrada inválida (código repetido, talhão inexistente)
+        S-->>Op: 400 Bad Request
+    else entrada válida
+        V->>DB: BEGIN (transaction.atomic)
+        V->>DB: INSERT Lote
+        loop cada item
+            V->>DB: SELECT Talhao ... FOR UPDATE
+            V->>DB: INSERT LoteTalhao
+        end
+        alt soma dos pesos ≠ peso total ou talhão repetido
+            V->>DB: ROLLBACK
+            V-->>Op: 409 Conflict + motivo
+        else regras de integridade OK
+            V->>V: pior status (BLOQUEADO > REVISAO > APROVADO)
+            V->>DB: UPDATE Lote (status, motivo)
+            V->>DB: COMMIT
+            V-->>Op: 201 Created {status, motivo, itens}
+        end
+    end

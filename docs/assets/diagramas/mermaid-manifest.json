@@ -1,0 +1,30 @@
+{
+  "arquitetura-mermaid-01.mmd": {
+    "source": "6c9eb0ec726487adc59247b3e91e4f571a0f73b9a3d4f29338f4d1b5cec6fd7f",
+    "svg": "7ab5a8485568ad58dc8e1214cd55bcea3070a2a79ebbe8c87ad86d259fa76328"
+  },
+  "cua-mermaid-01.mmd": {
+    "source": "0018b613ef283506fdc07936332c727d626436e018ebe6f2f94d385262bb4129",
+    "svg": "9e3aa87e5e3a91f5afdb3aa35257c87844b642773344c7af22911bdf3e607d76"
+  },
+  "deploy_ec2_sqlite-mermaid-01.mmd": {
+    "source": "f026a7fdcf0c0330fd8307e8fe7971d7363c81d81bbc66960a2e697b03083f60",
+    "svg": "6db2df37334d9178a27a711177c85d098b71091447bab3d68d7c58fc3c581ede"
+  },
+  "seq_com-mermaid-01.mmd": {
+    "source": "78541f77009eeccf99abf5beb35460efcb21de74477edef9d82644a6862ed6f6",
+    "svg": "df57c5889a49e37ce80a5ebd91c69332c041862fdb226bba3e1baab8751c6c07"
+  },
+  "seq_com-mermaid-02.mmd": {
+    "source": "bf0679a387b2a96c40b8649e80d3b74a71e656f8048f52b9872838920c95e3de",
+    "svg": "1c1ae70772b165f4de99a2fcbdfd682bdfaa2c415737bf985e49154c5e2330d6"
+  },
+  "seq_com-mermaid-03.mmd": {
+    "source": "e4c22275e38eea376bfea2ff724a64f43e0ec93ad794affcb3f7cb559513ecd2",
+    "svg": "e3978e0fb27de76bd3610e77dd0282f620ee86e8d5ffb8721b6a5771b77ffff5"
+  },
+  "seq_com-mermaid-04.mmd": {
+    "source": "939af08c7bdd24adeda18c4d52fbd7de48a43287b7ec8d22f6175c72e20abcb7",
+    "svg": "790319015884a88a38b396f1a2cabbff7877ffe1e8d27cbf114f270fa218bc52"
+  }
+}

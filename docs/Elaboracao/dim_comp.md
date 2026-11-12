@@ -5,7 +5,7 @@ title: Dimensionamento de Computação (EC2)
 
 # Modelo de Análise — Dimensionamento de Computação (EC2) (v1.0)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
 **Release**: 1 (AP2) — EC2 + Docker Compose + PostgreSQL<br>
 **Status**: Em revisão
@@ -32,58 +32,9 @@ feitas com a própria aplicação.
 As classes abaixo são as que consomem CPU e memória em cada requisição. Elas
 correspondem aos models, serializers e views do app Django `lavouraInteligente`.
 
-```plantuml
-@startuml dim_comp_classes
-skinparam classAttributeIconSize 0
-hide empty members
+![Diagrama dim_comp_classes](../assets/diagramas/dim_comp_classes.svg)
 
-package "Fronteira (API DRF)" {
-  class LoteViewSet <<boundary>> {
-    +receber(request)
-  }
-  class TalhaoViewSet <<boundary>> {
-    +get_queryset()
-  }
-  class "Produtor/FazendaViewSet" as CadViewSet <<boundary>>
-}
-
-package "Controle (regras)" {
-  class RecebimentoSerializer <<control>> {
-    +validate_codigo()
-  }
-  class "transaction.atomic" as Tx <<control>>
-}
-
-package "Entidade (PostgreSQL)" {
-  class Produtor <<entity>>
-  class Fazenda <<entity>>
-  class Talhao <<entity>> {
-    atributos : JSONB (GIN)
-    poligono : JSONB
-    status
-  }
-  class Lote <<entity>> {
-    status
-    motivo
-  }
-  class LoteTalhao <<entity>> {
-    peso_kg
-  }
-}
-
-LoteViewSet --> RecebimentoSerializer : valida entrada
-LoteViewSet --> Tx : grava Lote + itens
-Tx --> Lote
-Tx --> LoteTalhao
-TalhaoViewSet --> Talhao : atributos @> {...}
-CadViewSet --> Produtor
-CadViewSet --> Fazenda
-Produtor "1" -- "*" Fazenda
-Fazenda "1" -- "*" Talhao
-Lote "1" -- "*" LoteTalhao
-Talhao "1" -- "*" LoteTalhao
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/dim_comp_classes.puml)
 
 | Classe | Operação crítica | Custo dominante |
 | -- | -- | -- |
@@ -94,19 +45,17 @@ Talhao "1" -- "*" LoteTalhao
 
 ## 4. Medições com a aplicação
 
-Ambiente de teste da equipe (container local, mesma imagem e mesmo Compose da EC2), com
-o seed carregado:
+Verificação de 11/11/2026 na EC2 t3.small, com o seed e registros de demonstração:
 
-| Medida | Resultado |
+| Medida | Resultado e limite |
 | -- | -- |
-| Memória do container `web` (Gunicorn com 3 workers) | ~150 MiB |
-| Memória do container `db` (PostgreSQL 16 ocioso) | ~52 MiB |
-| `GET /api/talhoes/` — 20 requisições sequenciais | p50 = 11 ms; p95 = 49 ms |
-| Consulta `atributos @> '{"fonte": "DETER"}'` | plano usa `Bitmap Index Scan on talhao_atributos_gin` |
+| Memória `web` (3 workers) | 141,9 MiB em uma amostra de `docker stats`, sem carga sustentada |
+| Memória `db` | 55,7 MiB na mesma amostra |
+| 20 GETs externos sequenciais em `/api/talhoes/` | p50 310,3 ms; p95 339,6 ms, incluindo rede do cliente Windows |
+| JSONB/GIN | Índice criado e testado; o plano efetivo fica no registro SQL da validação. Não se garante uso do GIN em toda consulta. |
+| Disco efetivo | Sistema de arquivos raiz de 8 GiB; após limpeza de caches de instalação, cerca de 699 MiB livres antes do novo build |
 
-As medições de tempo foram feitas fora da EC2 e servem como ordem de grandeza. O teste
-de carga de 20 req/s (RNF-CAP-02) deve ser repetido na instância escolhida e registrado
-nas evidências do README.
+As antigas referências de 49 ms e plano GIN não possuíam artefato reproduzível nesta revisão e não são usadas como prova. Esta amostra não comprova 20 req/s por 30 minutos nem a volumetria-alvo. O volume de 30 GB da seção seguinte é uma **recomendação**, diferente dos 8 GiB efetivamente encontrados.
 
 ## 5. Memória de cálculo
 
@@ -118,9 +67,7 @@ nas evidências do README.
 | Folga para `docker compose build` (pip install) | ~300 MiB | pico só durante o deploy |
 | **Total no pico** | **~1,4 GiB** | |
 
-**Throughput**: cada requisição da balança gasta ~10–50 ms. Com 3 workers síncronos, a
-capacidade teórica é de 60 a 300 req/s, acima do pico de 20 req/s exigido. O gargalo
-esperado é o disco do banco nos commits, e não a CPU.
+**Throughput**: três workers não permitem deduzir a capacidade sem um teste concorrente. O cenário de 20 req/s por 30 min permanece uma meta de validação, e não uma medição realizada.
 
 **Workers**: a regra usual é `2 × vCPU + 1`. Na t3.small isso daria 5 workers, mas a
 equipe fixou 3 (`--workers 3` no `Dockerfile`) para deixar memória ao Postgres.
@@ -158,5 +105,5 @@ Tier na demonstração, deve criar 1 GiB de swap antes do primeiro build.
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Arquiteto de Soluções | | | Pendente |
-| Professor responsável | | | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

@@ -1,0 +1,19 @@
+    codigo    |  status   |                                                 atributos                                                  
+--------------+-----------+------------------------------------------------------------------------------------------------------------
+ TALHAO_8F23  | APROVADO  | {"ndvi": 0.78, "bioma": "cerrado", "fonte": "MapBiomas", "alertas": []}
+ TALHAO_10023 | REVISAO   | {"ndvi": 0.41, "bioma": "cerrado", "fonte": "DETER", "alertas": ["DETER-2026-09-21"]}
+ TALHAO_C401  | APROVADO  | {"ndvi": 0.82, "bioma": "mata_atlantica", "fonte": "Sentinel", "certificacao": "Rainforest"}
+ TALHAO_A777  | BLOQUEADO | {"ndvi": 0.22, "bioma": "amazonia", "fonte": "DETER", "alertas": ["DETER-2026-08-02", "DETER-2026-09-10"]}
+(4 rows)
+
+      indexname       |                                           indexdef                                            
+----------------------+-----------------------------------------------------------------------------------------------
+ talhao_atributos_gin | CREATE INDEX talhao_atributos_gin ON public."lavouraInteligente_talhao" USING gin (atributos)
+(1 row)
+
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Seq Scan on "lavouraInteligente_talhao"  (cost=0.00..12.50 rows=2 width=378)
+   Filter: (atributos @> '{"fonte": "DETER"}'::jsonb)
+(2 rows)
+

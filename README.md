@@ -1,4 +1,4 @@
-# Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR
+# Raízes — Rastreabilidade Agrícola e Conformidade EUDR
 
 **Código da Disciplina**: IBM8936<br>
 **Turma**: PC_ADS_26.2_8001_II<br>
@@ -16,15 +16,16 @@
 
 | O quê | Endereço |
 | -- | -- |
-| API publicada (EC2) | <http://18.190.28.86:8000/api/> |
-| Django Admin | <http://18.190.28.86:8000/admin/> |
+| Frontend Raízes | <http://18.117.197.72:8000/> |
+| API publicada (EC2) | <http://18.117.197.72:8000/api/> |
+| Django Admin | <http://18.117.197.72:8000/admin/> |
 | Documentação (MkDocs) | <https://projetos-de-extensao.github.io/PC_ADS_26.2_8001_II/> |
 
 > Se a instância for parada e iniciada sem Elastic IP, o IP muda: atualize esta tabela.
 
 ## Sobre
 
-A Lavoura Inteligente é uma plataforma de rastreabilidade agrícola. Ela consolida dados
+A Raízes é uma plataforma de rastreabilidade agrícola. Ela consolida dados
 de produtores, talhões, fontes ambientais (MapBiomas, DETER, Sentinel) e eventos de
 recebimento e mantém um status de risco atualizado para cada talhão.
 
@@ -103,7 +104,26 @@ erDiagram
 A arquitetura-alvo serverless (API Gateway, Lambda, DynamoDB, S3, Athena, EventBridge, SNS)
 está no [Documento de Arquitetura](docs/Elaboracao/arquitetura.md).
 
+## Frontend Raízes e monitoramento ambiental
+
+Portal próprio: login, painel e mapa, produtores/fazendas/talhões, recebimento de lotes,
+revisão com justificativa, vistorias, histórico e monitoramento ambiental INPE/DETER.
+A interface fica na raiz `/` e usa Django, as APIs e sessões existentes.
+
+Publicação e deploy autorizados pelo responsável em 11/11/2026. O endereço de implantação
+é <http://18.117.197.72:8000/>. Utilize a conta administrativa existente da EC2.
+Nenhuma senha de demonstração local é criada no servidor público.
+
+O [guia do frontend](docs/Construcao/frontend_raizes.md) liga telas e requisitos.
+O [guia de integrações](docs/Construcao/integracoes_aws_ambientais.md) descreve INPE/DETER,
+S3, DynamoDB, SNS, fila persistente e limites. A suíte contém 36 testes.
+MapBiomas/Sentinel, perfis por cooperativa e ortomosaicos de 5 GB permanecem pendentes.
+
 ## API
+
+Leituras acadêmicas permanecem públicas; gravações exigem usuário ativo da equipe
+(`is_staff`), com sessão/CSRF no navegador ou HTTP Basic nos exemplos de terminal.
+
 
 | Recurso | Endpoint | Observação |
 | -- | -- | -- |
@@ -119,7 +139,7 @@ Exemplos:
 curl "http://localhost:8000/api/talhoes/?atributos__bioma=cerrado"
 curl "http://localhost:8000/api/talhoes/?atributos__ndvi__lt=0.5"
 curl -G "http://localhost:8000/api/talhoes/" --data-urlencode 'atributos__contains={"fonte": "DETER"}'
-curl -X POST http://localhost:8000/api/lotes/receber/ -H "Content-Type: application/json" \
+curl --user "$RAIZES_USER:$RAIZES_PASSWORD" -X POST http://localhost:8000/api/lotes/receber/ -H "Content-Type: application/json" \
   -d '{"codigo": "2026-11-0001", "peso_total_kg": "300.00", "itens": [{"talhao": 1, "peso_kg": "200.00"}, {"talhao": 3, "peso_kg": "100.00"}]}'
 ```
 
@@ -168,93 +188,47 @@ O passo a passo manual está em
 [Deploy EC2 + Docker (PostgreSQL)](docs/Construcao/deploy_ec2_postgres.md), e o rollback em
 [Estratégias de Deploy](docs/Transicao/ativ_deploy.md#7-plano-de-rollback).
 
-## Evidências do deploy (B8)
+## Validação e evidências da AP2 (B8)
 
-Deploy de 10/11/2026 na EC2 **t3.small** (Amazon Linux 2023, us-east-2), commit `eb68283`,
-executado com `scripts/deploy_ec2.sh`. Os comandos abaixo rodam na EC2, dentro de
-`~/PC_ADS_26.2_8001_II/src`.
+**Registros de validação — 11/11/2026.** As capturas abaixo documentam a versão anterior ao novo deploy. Publicação e implantação do frontend e das integrações autorizadas pelo responsável. O guia de integrações separa as verificações atuais.
 
-| Verificação | Resultado |
+| Verificação | Resultado observado |
 | -- | -- |
-| Containers | `db` (postgres:16) healthy, porta 5432 só interna; `web` publicado em 0.0.0.0:8000 |
-| Testes | 10 testes de `lavouraInteligente` passando |
-| Persistência | lote `DEPLOY-20261110140819` mantido após `docker compose down` e `up -d` |
-| Backup | `cron` diário às 03:00; primeiro dump `src/backups/lavoura_2026-11-10_1408.sql.gz` |
-| Rede | Security Group com entrada apenas TCP 22 e 8000 |
+| Infraestrutura | t3.small, Amazon Linux 2023, us-east-2; disco real de 8 GiB |
+| Docker/PostgreSQL | `db` healthy, porta 5432 interna; `web` na porta 8000 |
+| API pública | CRUD dos cinco recursos, PUT/PATCH/DELETE, serializers aninhados e filtro JSON verificados |
+| Transação | Recebimento 201; peso divergente e talhão repetido retornam 409, sem gravação parcial |
+| Admin | Login real com CSRF e listagem de talhões verificados; estáticos acessíveis |
+| Persistência | Mesmo registro, ID e conteúdo após `docker compose down` e `up -d` |
+| Testes | 10 testes da versão atual na EC2/PostgreSQL 16; 36 testes da proposta no Windows/PostgreSQL 18 isolado |
+| Restore | Banco separado restaurado; contagens das cinco tabelas e índice GIN iguais ao original |
+| Backup | Dump local e envio S3 por função IAM quando configurado; ver guia de integrações |
+| Security Group | `launch-wizard-2` identificado. Conferência das regras no console AWS pendente; não há credenciais EC2 API na sessão SSH |
 
-### 1. Containers em execução
+As imagens de comandos abaixo são **transcrições das saídas reais capturadas por SSH**, não screenshots simulando uma janela de terminal. As capturas da API e do Admin são identificadas separadamente.
 
-```bash
-docker compose ps
-```
+### Containers e logs
 
-![docker compose ps: db healthy e web na porta 8000](docs/assets/evidencias/01-docker-ps.png)
+![Containers verificados](docs/assets/evidencias/01-docker-ps.png)
+![Logs reais da aplicação](docs/assets/evidencias/02-logs-web.png)
 
-### 2. Logs do deploy
+### API pública e Admin
 
-Migrations, criação do superusuário, seed e Gunicorn ouvindo na porta 8000.
+![API pública com filtro JSON](docs/assets/evidencias/03-api-ip-publico.png)
+![HTML do Admin autenticado, sem tokens, capturado para revisão](docs/assets/evidencias/04-admin.png)
 
-```bash
-docker compose logs web --tail 40
-```
+### PostgreSQL e persistência
 
-![logs do container web](docs/assets/evidencias/02-logs-web.png)
+![Consulta SQL, índice GIN e plano observado](docs/assets/evidencias/05-psql-talhoes.png)
+![Registro antes e depois do down/up](docs/assets/evidencias/06-persistencia.png)
 
-### 3. API pelo IP público
+### Testes, backup e restauração
 
-Navegador em <http://18.190.28.86:8000/api/talhoes/?atributos__bioma=cerrado> (filtro por campo JSONB).
+![Testes executados na EC2](docs/assets/evidencias/07-testes.png)
+![Cron e dumps locais](docs/assets/evidencias/09-backup-cron.png)
+![Restauração em banco separado](docs/assets/evidencias/10-restore.png)
 
-![API respondendo pelo IP público](docs/assets/evidencias/03-api-ip-publico.png)
-
-### 4. Django Admin
-
-Navegador em <http://18.190.28.86:8000/admin/lavouraInteligente/talhao/>, logado e com estilo.
-
-![Django Admin com a lista de talhões](docs/assets/evidencias/04-admin.png)
-
-### 5. Tabela no PostgreSQL
-
-```bash
-docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT codigo, status, atributos FROM \"lavouraInteligente_talhao\";"'
-```
-
-![consulta psql na tabela de talhões](docs/assets/evidencias/05-psql-talhoes.png)
-
-### 6. Persistência
-
-```bash
-curl -s http://localhost:8000/api/lotes/ ; echo
-docker compose down
-docker compose up -d
-sleep 10
-curl -s http://localhost:8000/api/lotes/ ; echo
-```
-
-![lotes antes e depois de down/up](docs/assets/evidencias/06-persistencia.png)
-
-### 7. Testes automatizados
-
-```bash
-docker compose exec web python manage.py test lavouraInteligente
-```
-
-![10 testes passando](docs/assets/evidencias/07-testes.png)
-
-### 8. Security Group
-
-Console da AWS → EC2 → Security Groups → regras de entrada (apenas TCP 22 e 8000).
-
-![regras de entrada do Security Group](docs/assets/evidencias/08-security-group.png)
-
-### 9. Backup agendado
-
-```bash
-crontab -l && ls -la backups/
-```
-
-![cron e arquivos de backup](docs/assets/evidencias/09-backup-cron.png)
-
-O registro completo dos comandos e saídas do deploy fica em `~/evidencias_deploy.txt` na EC2.
+O [registro de validação](docs/Transicao/validacao_ap2.md) separa verificações concluídas, propostas locais e pendências da entrega. Não há captura de regras do Security Group porque elas ainda não foram conferidas no console. Não confundir ausência de porta no Docker com prova das regras do SG.
 
 ## Documentação
 

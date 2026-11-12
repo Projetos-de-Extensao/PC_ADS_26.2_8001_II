@@ -5,7 +5,11 @@ title: Casos de Uso
 
 # Casos de Uso (v2.2)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
+!!! info "Escopo da entrega AP2"
+    Os casos completos descrevem a arquitetura-alvo. A seção 7 relaciona o subconjunto implementado na API e suas limitações.
+
+
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Data**: 01/10/2026<br>
 **Status**: Em revisão
 
@@ -33,62 +37,9 @@ Serviços AWS são componentes internos da solução e não atores do diagrama.
 
 ## 3. Diagrama funcional
 
-```plantuml
-@startuml LavouraInteligente_CasosDeUso
-left to right direction
-skinparam actorStyle awesome
+![Diagrama Raizes_CasosDeUso](../assets/diagramas/Raizes_CasosDeUso.svg)
 
-actor Administrador as Admin
-actor "Produtor /\nCooperativa" as Prod
-actor "Analista de\nconformidade" as Analista
-actor "Operador da\nbalanca" as Op
-actor Gestor as Gest
-actor Auditor as Audit
-actor "Fonte ambiental" as Fonte
-actor "Canal de notificacao" as Canal
-actor "Piloto de\ndrone" as Piloto
-
-rectangle "Lavoura Inteligente" {
-  usecase "UC-FUN-001\nAutenticar e autorizar" as UC1
-  usecase "UC-FUN-002\nGerenciar cadastros" as UC2
-  usecase "UC-FUN-003\nEnviar poligono do talhao" as UC3
-  usecase "UC-FUN-004\nIngerir dados ambientais" as UC4
-  usecase "UC-FUN-005\nCalcular status de risco" as UC5
-  usecase "UC-FUN-006\nConsultar status na balanca" as UC6
-  usecase "UC-FUN-007\nRevisar status" as UC7
-  usecase "UC-FUN-008\nNotificar mudanca de status" as UC8
-  usecase "UC-FUN-009\nConsultar historico e mapa" as UC9
-  usecase "UC-FUN-010\nGerar pacote auditavel" as UC10
-  usecase "UC-FUN-011\nSolicitar vistoria por drone" as UC11
-  usecase "UC-FUN-012\nEnviar imagens da vistoria" as UC12
-}
-
-Admin --> UC1
-Admin --> UC2
-Prod --> UC1
-Prod --> UC2
-Prod --> UC3
-Analista --> UC1
-Analista --> UC7
-Analista --> UC9
-Op --> UC1
-Op --> UC6
-Gest --> UC1
-Gest --> UC9
-Audit --> UC1
-Audit --> UC10
-Fonte --> UC4
-UC8 --> Canal
-UC4 ..> UC5 : dispara
-UC3 ..> UC5 : dispara
-UC5 ..> UC8 : dispara
-Analista --> UC11
-Piloto --> UC1
-Piloto --> UC12
-UC7 ..> UC11 : pode pedir
-UC12 ..> UC7 : evidencia
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/Raizes_CasosDeUso.puml)
 
 Autenticação é uma precondição transversal para os atores humanos. O UC-FUN-005 é
 disparado por eventos (novo polígono ou novo dataset), sem ator humano.
@@ -264,33 +215,20 @@ disparado por eventos (novo polígono ou novo dataset), sem ator humano.
 A Release 1 (AP2) implementa os casos de uso arquiteturalmente mais significativos para
 validar o modelo de dados e a decisão na balança.
 
-```mermaid
-flowchart LR
-    Prod([Produtor / Cooperativa]) --> UC2[UC-FUN-002<br/>Gerenciar cadastros]
-    Adm([Administrador]) --> UC1[UC-FUN-001<br/>Autenticar - Django Admin]
-    Adm --> UC2
-    Op([Operador da balança]) --> UC6[UC-FUN-006<br/>Consultar status na balança]
-    An([Analista]) --> UC7[UC-FUN-007<br/>Revisar status]
-    An --> UC9[UC-FUN-009<br/>Consultar talhões por atributo]
-    UC6 -. inclui .-> UC5[UC-FUN-005<br/>Avaliar pior status do lote]
-    UC2 --> API[(API DRF + PostgreSQL)]
-    UC6 --> API
-    UC7 --> API
-    UC9 --> API
-    UC1 --> API
-```
+![Diagrama cua-mermaid-01](../assets/diagramas/cua-mermaid-01.svg)
+
+[Fonte Mermaid](../assets/diagramas/cua-mermaid-01.mmd)
 
 | Caso de uso | Implementação na Release 1 | Endpoint / componente | Teste automatizado |
 | -- | -- | -- | -- |
 | UC-FUN-001 Autenticar e autorizar | Django Admin com superusuário criado pelo `bootstrap` | `/admin/` | `test_seed_idempotente_e_admin` |
 | UC-FUN-002 Gerenciar cadastros | CRUD de produtor, fazenda e talhão com serializers aninhados | `/api/produtores/`, `/api/fazendas/`, `/api/talhoes/` | `test_crud_e_serializer_aninhado`, `test_relacionamentos` |
-| UC-FUN-005 Calcular status de risco | Status do talhão gravado com o cadastro; o lote assume o pior status (RN-08) e talhão sem polígono não é APROVADO (RN-04) | `LoteViewSet.receber` | `test_lote_assume_pior_status_bloqueado` |
+| UC-FUN-005 Calcular status de risco | Status do talhão informado no cadastro; o recebimento aplica RN-08 e verifica somente ausência de polígono da RN-04, sem análise ambiental real | `LoteViewSet.receber` | `test_lote_assume_pior_status_bloqueado` |
 | UC-FUN-006 Consultar status na balança | Recepção do lote em transação única, com rollback por violação de integridade | `POST /api/lotes/receber/` | `test_recebimento_grava_lote_e_itens`, `test_soma_de_pesos_divergente_faz_rollback`, `test_talhao_repetido_faz_rollback` |
-| UC-FUN-007 Revisar status | Alteração do `status` do talhão pela API ou pelo admin | `PATCH /api/talhoes/{id}/` | coberto pelo CRUD |
-| UC-FUN-009 Consultar histórico e mapa | Lista e filtro por atributo JSON (base do mapa) | `GET /api/talhoes/?atributos__...` | `test_filtro_por_chave_json` |
+| UC-FUN-007 Revisar status | Portal proposto: justificativa, autor e snapshot preservados | `/app/talhoes/ID/revisar/` | `PortalTests.test_revisao_exige_justificativa_e_preserva_evidencia` |
+| UC-FUN-009 Consultar histórico e mapa | Portal proposto: mapa por status, filtros e trilha operacional; sem Athena | `/` e `/app/estado/` | testes de estado e roteiro de navegador |
 
-Os demais casos (ingestão ambiental, notificação, pacote auditável e drone) continuam
-especificados acima e dependem da arquitetura-alvo.
+A proposta local também implementa decisão do operador, solicitação/agendamento de vistoria, recepção de imagens e exportação do registro operacional. O [guia do frontend](../Construcao/frontend_raizes.md) registra os contratos e limites. Ingestão ambiental real, notificações SNS, upload de 5 GB e o pacote completo S3 continuam dependentes da arquitetura-alvo.
 
 ### 7.1. Cenário arquitetural da Release 1
 
@@ -310,6 +248,6 @@ especificados acima e dependem da arquitetura-alvo.
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Representante de negócio | | | Pendente |
-| Arquiteto de Soluções | | | Pendente |
-| Professor responsável | | | Pendente |
+| Representante de negócio | Não designado pela equipe | Não registrada | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

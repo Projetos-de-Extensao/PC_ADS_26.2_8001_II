@@ -1,5 +1,6 @@
 from django.contrib.postgres.indexes import GinIndex
 from django.db import models
+from django.conf import settings
 
 
 class StatusRisco(models.TextChoices):
@@ -91,3 +92,91 @@ class LoteTalhao(models.Model):
 
     def __str__(self):
         return f"{self.lote} <- {self.talhao}"
+
+
+class RevisaoStatus(models.Model):
+    talhao = models.ForeignKey(Talhao, on_delete=models.PROTECT, related_name='revisoes')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    status_anterior = models.CharField(max_length=10, choices=StatusRisco.choices)
+    status_novo = models.CharField(max_length=10, choices=StatusRisco.choices)
+    justificativa = models.TextField()
+    evidencia_original = models.JSONField(default=dict)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+
+
+class DecisaoRecebimento(models.Model):
+    lote = models.OneToOneField(Lote, on_delete=models.PROTECT, related_name='decisao')
+    operador = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    acao = models.CharField(max_length=10, choices=[('ACEITAR','Aceitar'),('RECUSAR','Recusar')])
+    status_consultado = models.CharField(max_length=10, choices=StatusRisco.choices)
+    justificativa = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+
+class Vistoria(models.Model):
+    ESTADOS = [('SOLICITADA','Solicitada'),('AGENDADA','Agendada'),('RECEBIDA','Recebida')]
+    talhao = models.ForeignKey(Talhao, on_delete=models.PROTECT, related_name='vistorias')
+    solicitante = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    motivo = models.TextField()
+    prazo = models.DateField()
+    status = models.CharField(max_length=12, choices=ESTADOS, default='SOLICITADA')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+        constraints = [models.UniqueConstraint(fields=['talhao'],
+            condition=models.Q(status__in=['SOLICITADA','AGENDADA']),name='vistoria_aberta_por_talhao')]
+
+
+class ArquivoVistoria(models.Model):
+    vistoria = models.ForeignKey(Vistoria, on_delete=models.PROTECT, related_name='arquivos')
+    arquivo = models.FileField(upload_to='vistorias/%Y/%m/')
+    nome_original = models.CharField(max_length=255)
+    sha256 = models.CharField(max_length=64)
+    tamanho = models.PositiveBigIntegerField()
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+
+class EventoAuditoria(models.Model):
+    ator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    acao = models.CharField(max_length=80)
+    recurso = models.CharField(max_length=80)
+    recurso_id = models.PositiveBigIntegerField(null=True)
+    descricao = models.CharField(max_length=255)
+    dados = models.JSONField(default=dict)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+
+
+class AnaliseAmbiental(models.Model):
+    talhao = models.ForeignKey(Talhao, on_delete=models.PROTECT, related_name='analises')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    poligono_sha256 = models.CharField(max_length=64)
+    poligono = models.JSONField()
+    status = models.CharField(max_length=10, choices=StatusRisco.choices)
+    resultado = models.JSONField()
+    datasets = models.JSONField(default=dict)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    valido_ate = models.DateTimeField()
+
+    class Meta:
+        ordering = ['-criado_em']
+
+
+class EntregaCloud(models.Model):
+    tipo = models.CharField(max_length=20)
+    chave = models.CharField(max_length=255)
+    conteudo = models.JSONField()
+    tentativas = models.PositiveIntegerField(default=0)
+    erro = models.CharField(max_length=100, blank=True)
+    enviado_em = models.DateTimeField(null=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']

@@ -5,8 +5,12 @@ title: Requisitos Suplementares
 
 # Documento de Requisitos Suplementares (v2.2)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
-**Fase**: Elaboração<br>
+!!! info "Escopo da entrega AP2"
+    Os requisitos descrevem o produto completo. A seção 13 registra o que a Release 1 efetivamente entrega e as metas ainda não comprovadas; uma meta de SLA não equivale a disponibilidade medida.
+
+
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
+**Fase**: Iniciação<br>
 **Data**: 01/10/2026<br>
 **Status**: Em revisão
 
@@ -137,7 +141,7 @@ para continuar reproduzíveis.
 | Responsável | Obrigações principais |
 | -- | -- |
 | AWS | Serviços gerenciados e infraestrutura física segundo os SLAs de cada serviço. |
-| Equipe Lavoura Inteligente | Código, configuração, IAM, dados, testes, custos, backup e resposta a incidentes. |
+| Equipe Raízes | Código, configuração, IAM, dados, testes, custos, backup e resposta a incidentes. |
 | Cooperativa | Qualidade dos cadastros, decisão final na balança e revisão humana. |
 | Fontes ambientais | Publicação dos dados; a plataforma não garante sua exatidão. |
 | Equipe de drones | Voar dentro das regras da ANAC e do DECEA, gerar o ortomosaico e enviar no prazo. |
@@ -170,17 +174,17 @@ para continuar reproduzíveis.
 
 | Requisito | Situação | Como é atendido (ou lacuna) |
 | -- | -- | -- |
-| RNF-PER-01 (p95 < 500 ms) | Atendido no teste local | p95 de 49 ms em `GET /api/talhoes/` no ambiente de teste; repetir na EC2. |
-| RNF-CAP-02 (20 req/s) | A medir | Capacidade estimada de 60–300 req/s com 3 workers (dim_comp.md); teste de carga na EC2 pendente. |
+| RNF-PER-01 (p95 < 500 ms) | Verificado apenas com dados de demonstração | Em 11/11/2026, 20 GETs sequenciais externos: p50 310,3 ms e p95 339,6 ms. Não comprova o cenário completo de carga. |
+| RNF-CAP-02 (20 req/s) | A medir | Teste sustentado de 20 req/s por 30 min pendente; não inferir capacidade de produção de uma amostra sequencial. |
 | RNF-CON-01 (99,9%) | Parcial | Alvo da Release 1: **99%** (instância única, `restart: unless-stopped`); 99,9% exige RDS Multi-AZ e mais de uma instância web. |
 | RNF-CON-03 (RPO < 15 min) | Lacuna | `pg_dump` diário (RPO 24 h). Meta exige WAL contínuo ou PITR do RDS. |
-| RNF-CON-04 (RTO < 4 h) | Atendido | Restore testado em < 30 min; nova EC2 com `deploy_ec2.sh` em < 1 h. |
+| RNF-CON-04 (RTO < 4 h) | Parcial | Restauração em banco separado verificada nesta instância; recuperação completa de uma instância perdida ainda não ensaiada. |
 | RNF-SEG-01 (HTTPS) | Lacuna | API em HTTP na porta 8000; HTTPS previsto com Nginx + certificado ou ALB. |
 | RNF-SEG-05 (segredos fora do código) | Atendido | `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` e `POSTGRES_*` lidos do `.env` (no `.gitignore`); só o `.env.example` é versionado; `.env` com permissão 600. |
-| Exposição do banco | Atendido | Serviço `db` sem porta publicada; Security Group com apenas 22 (SSH) e 8000 (API). |
-| RNF-OPS-04 (backup automatizado) | Parcial | `scripts/backup_db.sh` + `cron` diário + cópia para o S3. |
+| Exposição do banco | Atendido | Serviço `db` sem porta publicada, confirmado por Docker. As regras do Security Group exigem conferência no console: a sessão SSH não possui credenciais de leitura da API EC2. |
+| RNF-OPS-04 (backup automatizado) | Parcial | `scripts/backup_db.sh` + `cron` diário. Cópia S3 e rotação automática não implementadas; manter cópia externa do dump. |
 | RNF-MAN-01 (deploy automatizado) | Atendido | `scripts/deploy_ec2.sh` instala dependências, atualiza o código e sobe a stack. |
-| RNF-MAN-02 (rollback < 5 min) | Atendido | `git checkout <commit>` + `docker compose up -d --build` (ativ_deploy.md, seção 7). |
+| RNF-MAN-02 (rollback < 5 min) | Procedimento definido | Imagem anterior preservada antes do build; tempo de rollback completo ainda não medido. |
 | RNF-MAN-07 (docs publicáveis) | Atendido | CI executa `mkdocs build --strict`. |
 | RNF-CUS-01 (< US$ 1.500/mês) | Atendido | ~US$ 21/mês na Release 1. |
 
@@ -190,14 +194,14 @@ para continuar reproduzíveis.
 | -- | -- |
 | Disponibilidade da API | 99% ao mês (~7 h de indisponibilidade em 30 dias) |
 | Janela de manutenção | atualizações fora do horário da balança, com aviso prévio |
-| Recuperação | RPO 24 h; RTO 30 min (restore) ou 1 h (instância nova) |
+| Recuperação | Meta: RPO 24 h se a instância estiver ligada no horário do cron; RTO 30 min para restore e 1 h para nova instância, sujeitos a ensaio completo |
 | Suporte | equipe do projeto, em horário acadêmico |
 
 ### 13.4. Riscos da Release 1
 
 | Risco | Impacto | Mitigação |
 | -- | -- | -- |
-| Perda da instância ou do volume EBS | perda de até 24 h de dados | dump diário copiado para o S3; snapshot do EBS antes de mudanças grandes |
+| Perda da instância ou do volume EBS | perda de até 24 h de dados | cópia externa manual do dump; S3 e snapshots ainda são ações planejadas |
 | `docker compose down -v` por engano | apaga o volume `pgdata` | procedimento documentado; backup antes de cada atualização |
 | Memória insuficiente no build | deploy falha | t3.small (2 GiB); swap em t3.micro |
 | Segredo versionado por engano | penalidade e exposição | `.env` no `.gitignore` e no `.dockerignore`; revisão do `git status` antes do commit |
@@ -215,6 +219,6 @@ para continuar reproduzíveis.
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Arquiteto de Soluções | | | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
 | Responsável de Segurança | | | Pendente |
-| Professor responsável | | | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

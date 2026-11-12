@@ -4,10 +4,11 @@ from django.core.exceptions import FieldError
 from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, APIException
 from rest_framework.response import Response
 
-from .models import Fazenda, Lote, LoteTalhao, Produtor, StatusRisco, Talhao
+from .models import EventoAuditoria, Fazenda, Lote, LoteTalhao, Produtor, StatusRisco, Talhao
+from django.db.models.deletion import ProtectedError
 from .serializers import (
     FazendaSerializer,
     LoteSerializer,
@@ -22,21 +23,61 @@ class RegraNegocioError(Exception):
     pass
 
 
-class ProdutorViewSet(viewsets.ModelViewSet):
+class ReferenciaAtiva(APIException):
+    status_code = 409
+    default_detail = 'Este cadastro possui referências ativas. Remova os vínculos antes de excluir.'
+
+
+class RegistroAuditoriaMixin:
+    def registrar(self,instance,acao):
+        usuario=self.request.user if self.request.user.is_authenticated else None
+        EventoAuditoria.objects.create(ator=usuario,acao=acao,
+           recurso=instance._meta.model_name,recurso_id=instance.pk,
+           descricao=f'{instance}: '+{'CRIAR':'cadastro criado','ALTERAR':'cadastro atualizado','EXCLUIR':'cadastro excluído'}[acao])
+
+    @transaction.atomic
+    def perform_create(self,serializer):
+        self.registrar(serializer.save(),'CRIAR')
+
+    @transaction.atomic
+    def perform_update(self,serializer):
+        before=serializer.instance.poligono if isinstance(serializer.instance,Talhao) else None
+        self.registrar(serializer.save(),'ALTERAR')
+        if before is not None and before!=serializer.instance.poligono:
+            from .ambiental import canonical
+            from .cloud import enqueue
+            import hashlib
+            snapshot={'talhao':serializer.instance.pk,'antes':before,'depois':serializer.instance.poligono,
+                'sha256':hashlib.sha256(canonical(serializer.instance.poligono)).hexdigest()}
+            event=EventoAuditoria.objects.create(ator=self.request.user,acao='VERSIONAR_POLIGONO',
+                recurso='talhao',recurso_id=serializer.instance.pk,
+                descricao=f'{serializer.instance.codigo}: nova versão do polígono',dados=snapshot)
+            enqueue('EVIDENCIA',f'poligonos/talhao-{serializer.instance.pk}/evento-{event.pk}.json',snapshot)
+
+    @transaction.atomic
+    def perform_destroy(self,instance):
+        if isinstance(instance,Produtor) and instance.fazendas.exists():raise ReferenciaAtiva()
+        if isinstance(instance,Fazenda) and instance.talhoes.exists():raise ReferenciaAtiva()
+        self.registrar(instance,'EXCLUIR')
+        try:instance.delete()
+        except ProtectedError:raise ReferenciaAtiva()
+
+
+class ProdutorViewSet(RegistroAuditoriaMixin, viewsets.ModelViewSet):
     queryset = Produtor.objects.prefetch_related("fazendas__talhoes")
     serializer_class = ProdutorSerializer
 
 
-class FazendaViewSet(viewsets.ModelViewSet):
+class FazendaViewSet(RegistroAuditoriaMixin, viewsets.ModelViewSet):
     queryset = Fazenda.objects.select_related("produtor").prefetch_related("talhoes")
     serializer_class = FazendaSerializer
 
 
-class TalhaoViewSet(viewsets.ModelViewSet):
+class TalhaoViewSet(RegistroAuditoriaMixin, viewsets.ModelViewSet):
     """CRUD de talhões com filtro por campos do JSON `atributos`.
 
     Exemplos: ?atributos__bioma=cerrado  |  ?atributos__ndvi__gte=0.5
-              ?atributos__contains={"fonte": "MapBiomas"}  (usa o índice GIN)
+              ?atributos__contains={"fonte": "MapBiomas"}  (consulta compatível com GIN; plano depende do otimizador)
     """
 
     serializer_class = TalhaoSerializer
@@ -62,12 +103,12 @@ class TalhaoViewSet(viewsets.ModelViewSet):
         return qs
 
 
-class LoteTalhaoViewSet(viewsets.ModelViewSet):
+class LoteTalhaoViewSet(RegistroAuditoriaMixin, viewsets.ModelViewSet):
     queryset = LoteTalhao.objects.select_related("lote", "talhao")
     serializer_class = LoteTalhaoSerializer
 
 
-class LoteViewSet(viewsets.ModelViewSet):
+class LoteViewSet(RegistroAuditoriaMixin, viewsets.ModelViewSet):
     queryset = Lote.objects.prefetch_related("itens__talhao")
     serializer_class = LoteSerializer
 
@@ -115,6 +156,9 @@ class LoteViewSet(viewsets.ModelViewSet):
                     lote.status = StatusRisco.APROVADO
                     lote.motivo = "Origem rastreável e sem ocorrência crítica nos talhões."
                 lote.save()
+                EventoAuditoria.objects.create(ator=request.user if request.user.is_authenticated else None,
+                    acao='RECEBER_LOTE',recurso='lote',recurso_id=lote.id,
+                    descricao=f'{lote.codigo}: lote recebido na balança',dados={'status':lote.status,'motivo':lote.motivo})
         except RegraNegocioError as exc:
             return Response({"detalhe": str(exc)}, status=status.HTTP_409_CONFLICT)
         return Response(LoteSerializer(lote).data, status=status.HTTP_201_CREATED)

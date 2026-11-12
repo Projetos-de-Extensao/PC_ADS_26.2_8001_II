@@ -11,6 +11,7 @@ from .models import Fazenda, Lote, LoteTalhao, Produtor, StatusRisco, Talhao
 
 class BaseDados(APITestCase):
     def setUp(self):
+        self.client.force_authenticate(get_user_model().objects.create_user('teste-api',is_staff=True))
         self.produtor = Produtor.objects.create(nome="João", documento="111", municipio="Cristalina", uf="GO")
         self.fazenda = Fazenda.objects.create(
             produtor=self.produtor, nome="Santa Rita", municipio="Cristalina", uf="GO", area_ha=Decimal("500"))
@@ -110,3 +111,45 @@ class AdminSeedTests(APITestCase):
         self.client.login(username="admin", password="senha-teste-123")
         for url in ["/admin/", "/admin/lavouraInteligente/talhao/", "/admin/lavouraInteligente/lote/"]:
             self.assertEqual(self.client.get(url).status_code, 200, url)
+
+
+class CrudCompletoTests(BaseDados):
+    def test_crud_dos_cinco_recursos(self):
+        recursos = []
+
+        def criar(nome, dados, alteracao):
+            resposta = self.client.post(f'/api/{nome}/', dados, format='json')
+            self.assertEqual(resposta.status_code, 201, resposta.data)
+            url = f'/api/{nome}/{resposta.data["id"]}/'
+            atual = self.client.get(url)
+            self.assertEqual(atual.status_code, 200)
+            self.assertEqual(self.client.get(f'/api/{nome}/').status_code, 200)
+            completa = self.client.put(url, atual.data, format='json')
+            self.assertEqual(completa.status_code, 200, completa.data)
+            parcial = self.client.patch(url, alteracao, format='json')
+            self.assertEqual(parcial.status_code, 200, parcial.data)
+            for chave, valor in alteracao.items():
+                self.assertEqual(parcial.data[chave], valor)
+            recursos.append(url)
+            return resposta.data['id']
+
+        produtor = criar('produtores', {'nome':'CRUD','documento':'crud-1',
+                         'municipio':'Cristalina','uf':'GO'}, {'nome':'Atualizado'})
+        fazenda = criar('fazendas', {'produtor':produtor,'nome':'CRUD','municipio':'Cristalina',
+                        'uf':'GO','area_ha':'10.00'}, {'nome':'Atualizada'})
+        talhao = criar('talhoes', {'fazenda':fazenda,'codigo':'CRUD-T','cultura':'soja',
+                       'area_ha':'2.00'}, {'cultura':'milho'})
+        lote = criar('lotes', {'codigo':'CRUD-L','peso_total_kg':'100.00'}, {'motivo':'CRUD'})
+        criar('lote-itens', {'lote':lote,'talhao':talhao,'peso_kg':'100.00'}, {'peso_kg':'99.00'})
+        for url in reversed(recursos):
+            self.assertEqual(self.client.delete(url).status_code, 204, url)
+            self.assertEqual(self.client.get(url).status_code, 404, url)
+
+    def test_talhao_sem_poligono_exige_revisao_no_recebimento(self):
+        self.ok.poligono = {}
+        self.ok.save(update_fields=['poligono'])
+        resposta = self.client.post('/api/lotes/receber/', {
+            'codigo':'L-SEM-POLIGONO','peso_total_kg':'10.00',
+            'itens':[{'talhao':self.ok.id,'peso_kg':'10.00'}]}, format='json')
+        self.assertEqual(resposta.status_code, 201, resposta.data)
+        self.assertEqual(resposta.data['status'], StatusRisco.REVISAO)

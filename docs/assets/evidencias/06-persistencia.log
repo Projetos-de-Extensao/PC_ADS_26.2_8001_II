@@ -1,0 +1,28 @@
+ Container src-web-1 Stopping 
+ Container src-web-1 Stopped 
+ Container src-web-1 Removing 
+ Container src-web-1 Removed 
+ Container src-db-1 Stopping 
+ Container src-db-1 Stopped 
+ Container src-db-1 Removing 
+ Container src-db-1 Removed 
+ Network src_default Removing 
+ Network src_default Removed 
+ Network src_default Creating 
+ Network src_default Creating 
+ Network src_default Created 
+ Network src_default Created 
+ Container src-db-1 Creating 
+ Container src-db-1 Created 
+ Container src-web-1 Creating 
+ Container src-web-1 Created 
+ Container src-db-1 Starting 
+ Container src-db-1 Started 
+ Container src-db-1 Waiting 
+ Container src-db-1 Healthy 
+ Container src-web-1 Starting 
+ Container src-web-1 Started 
+
+ANTES: {"id": 8, "codigo": "EVIDENCIA-AP2-20261111234716", "recebido_em": "2026-11-11T20:47:16.168569-03:00", "peso_total_kg": "1.00", "status": "APROVADO", "motivo": "Prova de persistencia AP2", "itens": []}
+DEPOIS: {"id": 8, "codigo": "EVIDENCIA-AP2-20261111234716", "recebido_em": "2026-11-11T20:47:16.168569-03:00", "peso_total_kg": "1.00", "status": "APROVADO", "motivo": "Prova de persistencia AP2", "itens": []}
+Mesmo ID e conteudo apos down/up: OK

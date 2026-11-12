@@ -5,7 +5,11 @@ title: Documento de Visão
 
 # Documento de Visão (v2.2)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
+!!! info "Escopo da entrega AP2"
+    A implementação atual é EC2 + Docker Compose + PostgreSQL. As funcionalidades completas de satélite, drones e auditoria descritas nesta visão são a evolução planejada. A seção 8 delimita a Release 1.
+
+
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Case**: 6 — AgTech<br>
 **Turma**: PC_ADS_26.2_8001_II<br>
 **Fase**: Iniciação<br>
@@ -14,7 +18,7 @@ title: Documento de Visão
 ## 1. Introdução
 
 Este documento apresenta o problema de negócio, os usuários, o escopo e as metas de
-qualidade da plataforma Lavoura Inteligente. Os detalhes funcionais e os critérios
+qualidade da plataforma Raízes. Os detalhes funcionais e os critérios
 mensuráveis estão, respectivamente, no Levantamento de Requisitos e no Documento de
 Requisitos Suplementares. A arquitetura técnica está descrita no Documento de
 Arquitetura.
@@ -131,7 +135,7 @@ O monitoramento acontece em duas camadas:
 ### 2.3. Posicionamento do produto
 
 Para cooperativas e cerealistas que precisam comprovar a origem da produção, a
-**Lavoura Inteligente** é uma plataforma de rastreabilidade que cruza polígonos de
+**Raízes** é uma plataforma de rastreabilidade que cruza polígonos de
 talhões com dados ambientais e entrega uma decisão operacional rastreável em poucos
 segundos. Diferentemente da verificação manual, o status é recalculado automaticamente
 quando chegam novos dados e toda decisão fica acompanhada de evidências versionadas.
@@ -244,10 +248,11 @@ no Documento de Arquitetura.
 | -- | -- |
 | Cadastro de produtores, fazendas e talhões | CRUD em `/api/produtores/`, `/api/fazendas/` e `/api/talhoes/`, com serializers aninhados e Django Admin |
 | Polígono e atributos ambientais do talhão | `poligono` (GeoJSON) e `atributos` (bioma, NDVI, alertas, fonte) em JSONB com índice GIN |
-| Status APROVADO, REVISÃO ou BLOQUEADO | campo `status` do talhão e do lote, sempre com `motivo` |
+| Status APROVADO, REVISÃO ou BLOQUEADO | campo `status` do talhão e do lote; somente `Lote` possui o campo `motivo` |
 | Consulta na balança | `POST /api/lotes/receber/`: grava o lote numa transação e devolve o pior status dos talhões de origem (RN-08) |
 | Consulta por atributo ambiental | filtro `?atributos__chave=valor` (ex.: `?atributos__fonte=DETER`) |
-| Ingestão ambiental, drone, SNS, Athena, DynamoDB | **fora da Release 1**: permanecem na arquitetura-alvo |
+| Frontend operacional (proposta local) | Painel/mapa, cadastros, balança, revisão com autoria, vistorias, arquivos e histórico; aguarda publicação |
+| Ingestão ambiental real, SNS, Athena, DynamoDB e validação geoespacial automática de imagens | **fora da Release 1**: permanecem na arquitetura-alvo |
 
 A decisão de usar EC2 + Docker + PostgreSQL e seus impactos nos requisitos não funcionais
 estão no [Documento de Requisitos Suplementares](rs.md), seção 13, e em
@@ -265,5 +270,5 @@ estão no [Documento de Requisitos Suplementares](rs.md), seção 13, e em
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Arquiteto de Soluções | | | Pendente |
-| Professor responsável | | | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

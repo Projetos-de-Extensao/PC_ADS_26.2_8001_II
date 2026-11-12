@@ -1,0 +1,33 @@
+@startuml AuditCompliance_Classes
+title Pacote Audit & Compliance - Classes de Análise
+
+class EventoAuditoria {
+  -ator: String
+  -recurso: String
+  -acao: String
+  -timestamp: DateTime
+  -correlationId: String
+}
+
+class TrilhaAuditoria {
+  +consultar(filtro): List<EventoAuditoria>
+}
+
+class PacoteAuditavel {
+  -alvo: Produtor/Lote
+  -evidencias: List<Evidencia>
+  -geradoEm: DateTime
+  +gerar(): URL
+  +verificarHashes(): Boolean
+}
+
+class InventarioDado {
+  -categoria: String
+  -finalidade: String
+  -baseLegal: String
+  -retencao: String
+}
+
+TrilhaAuditoria "1" -- "*" EventoAuditoria : contém
+PacoteAuditavel "1" -- "*" EventoAuditoria : inclui
+@enduml

@@ -5,7 +5,7 @@ title: Estratégias de Deploy (Atividades)
 
 # Modelo de Design — Estratégias de Deploy e Atividades (v1.0)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Transição<br>
 **Release**: 1 (AP2)<br>
 **Status**: Em revisão
@@ -52,52 +52,9 @@ e a disponibilidade de 99,9% (ver [dimrbd.md](../Elaboracao/dimrbd.md), seção 
 
 ## 4. Diagrama de atividades do deploy realizado
 
-```plantuml
-@startuml atividades_deploy
-|Windows (equipe)|
-start
-:Alterar código, models e migrations;
-:Testar localmente
-(docker compose up -d --build
-e manage.py test);
-if (Testes passaram?) then (sim)
-  :git commit e git push;
-else (não)
-  :Corrigir;
-  stop
-endif
-|GitHub|
-:CI "Deploy docs"
-(mkdocs build --strict);
-:Publicar site MkDocs
-(GitHub Pages);
-|EC2 (Amazon Linux 2023)|
-:ssh na instância;
-:scripts/backup_db.sh
-(antes de atualizar);
-:git pull
-(scripts/deploy_ec2.sh);
-if (.env existe?) then (sim)
-else (não)
-  :Gerar .env com segredos
-aleatórios (chmod 600);
-endif
-:docker compose up -d --build;
-:db: postgres:16 + healthcheck;
-:web: bootstrap
-(collectstatic, migrate,
-superusuário, seed);
-:Gunicorn na porta 8000;
-if (GET /api/ responde 200?) then (sim)
-  :Registrar evidências
-(docker ps, logs, psql, API);
-  stop
-else (não)
-  :Executar plano de rollback;
-  stop
-endif
-@enduml
-```
+![Diagrama atividades_deploy](../assets/diagramas/atividades_deploy.svg)
+
+[Fonte PlantUML](../assets/diagramas/atividades_deploy.puml)
 
 ## 5. Estimativa de tempo
 
@@ -118,23 +75,26 @@ endif
 | EC2 t3.small on-demand | 730 h | US$ 15,18 |
 | EBS gp3 | 30 GB | US$ 2,40 |
 | IPv4 público / Elastic IP associado | 730 h × US$ 0,005 | US$ 3,65 |
-| S3 para backups | ~2 GB | US$ 0,05 |
+| S3 para backups (planejado, não implantado) | — | Não incluído no ambiente observado |
 | Transferência de saída | < 100 GB (faixa gratuita) | US$ 0,00 |
 | **Total** | | **~US$ 21,28/mês** |
 
-Fica bem abaixo do orçamento de US$ 1.500/mês (RNF-CUS-01). Com uma t3.micro do Free
-Tier, o custo da instância cai a zero durante a elegibilidade.
+Fica bem abaixo do orçamento de US$ 1.500/mês (RNF-CUS-01). A elegibilidade a créditos/Free Tier depende da conta e não foi confirmada. A instância real é t3.small.
 
 \* us-east-2, on-demand, valores de referência a confirmar no AWS Pricing Calculator.
+
+O volume de 30 GB acima é recomendado; a EC2 observada possui apenas 8 GiB. Admitindo gp3 à tarifa de referência de US$ 0,08/GB-mês, o cenário com 8 GB seria cerca de US$ 19,47/mês (730 h de t3.small a US$ 0,0208/h + IPv4). O tipo exato do volume, a tarifa regional e créditos devem ser confirmados no console/Calculator. Não se tratam de valores da fatura.
+
+Fontes de referência consultadas em 11/11/2026: [EC2 On-Demand](https://aws.amazon.com/ec2/pricing/on-demand/), [EBS](https://aws.amazon.com/ebs/pricing/) e [IPv4/VPC](https://aws.amazon.com/vpc/pricing/).
 
 ## 7. Plano de rollback
 
 | Situação | Ação | Tempo alvo |
 | -- | -- | -- |
-| Build falhou | Nada muda: os containers anteriores continuam rodando. Corrigir no Windows e fazer novo push. | 0 min de indisponibilidade |
+| Build falhou | Se o build falhar antes de recriar serviços, os containers anteriores permanecem. Preservar a imagem estável, conferir o estado e corrigir no Windows antes de novo push. | Sem garantia; conferir estado |
 | Nova versão sobe mas a API falha | `git log --oneline` → `git checkout <commit_estável>` → `docker compose up -d --build` | < 5 min (RNF-MAN-02) |
 | Migration corrompeu ou perdeu dados | Parar o web, restaurar o dump feito antes do deploy (procedimento em [dimrbd.md](../Elaboracao/dimrbd.md), 5.2) e voltar ao commit anterior | < 30 min |
-| Instância perdida | Nova EC2 + `deploy_ec2.sh` + restaurar o último dump do S3 | < 1 h |
+| Instância perdida | Nova EC2 + `deploy_ec2.sh` + restaurar uma cópia externa disponível; cópia S3 ainda não automatizada | < 1 h |
 
 Regras: **sempre** rodar `scripts/backup_db.sh` antes de uma atualização com migration e
 **nunca** usar `docker compose down -v` na EC2. Depois de um rollback com `git checkout`,
@@ -149,9 +109,9 @@ após o deploy na EC2.
 - [x] 10 testes automatizados passando em `python manage.py test`.
 - [x] PostgreSQL sem porta publicada (serviço `db` sem `ports` no Compose).
 - [x] Dados persistem depois de `docker compose down` e `up -d` (teste local).
-- [ ] API no IP público da EC2 (`http://<IP_PUBLICO_EC2>:8000/api/`) e Django Admin com estilo.
+- [x] API no IP público atual e Django Admin autenticado com estáticos, verificados em 11/11/2026.
 - [ ] Security Group só com 22 e 8000.
-- [ ] Persistência comprovada na EC2 e evidências (prints) anexadas ao README.
+- [x] Persistência comprovada na EC2; evidências preparadas no rascunho local do README, aguardando publicação.
 
 ## 9. Histórico e aprovação
 
@@ -161,5 +121,5 @@ após o deploy na EC2.
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Arquiteto de Soluções | | | Pendente |
-| Professor responsável | | | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

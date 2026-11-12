@@ -5,7 +5,11 @@ title: Modelo de Análise (Segurança)
 
 # Modelo de Análise (Pacotes e Subsistemas) (v2.2)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
+!!! info "Escopo da entrega AP2"
+    As seções de segurança e nuvem descrevem a arquitetura-alvo. Os pacotes efetivamente implantados na Release 1 estão na seção 6; a API acadêmica usa AllowAny e o Admin exige autenticação.
+
+
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
 **Data**: 01/10/2026<br>
 **Status**: Em revisão
@@ -62,57 +66,9 @@ Observabilidade geral, backup e recuperação pertencem ao cenário **CA-ARQ-008
 
 ### 2.1. Diagrama de pacotes
 
-```plantuml
-@startuml LavouraInteligente_PacotesSeguranca
-skinparam roundCorner 12
-skinparam packageStyle rectangle
-title Modelo de Análise (Pacotes) - Segurança Lavoura Inteligente
+![Diagrama Raizes_PacotesSeguranca](../assets/diagramas/Raizes_PacotesSeguranca.svg)
 
-package "Identity & Access" as IAM_PKG #E8F0FE {
-  [Cognito User Pool]
-  [Grupos por perfil]
-  [MFA]
-  [IAM Roles por Lambda]
-  [Credencial da balança]
-  [Link temporário de upload]
-}
-
-package "Network Security" as NET_PKG #FFF4E5 {
-  [VPC privada]
-  [Security Groups]
-  [VPC Endpoints]
-  [TLS / CloudFront / API Gateway]
-  [WAF]
-}
-
-package "Data Protection" as DATA_PKG #E8F5E9 {
-  [KMS Keys]
-  [RDS/PostGIS Encryption]
-  [DynamoDB Encryption]
-  [S3 Encryption]
-  [Object Lock + Hash]
-}
-
-package "Secrets Management" as SEC_PKG #FCE4EC {
-  [Secrets Manager]
-  [Rotation Policies]
-}
-
-package "Audit & Compliance" as AUD_PKG #EDE7F6 {
-  [CloudTrail]
-  [Trilha da aplicação]
-  [Pacote auditável]
-  [Inventário LGPD]
-}
-
-NET_PKG --> IAM_PKG
-IAM_PKG --> DATA_PKG
-DATA_PKG --> SEC_PKG
-AUD_PKG ..> IAM_PKG
-AUD_PKG ..> NET_PKG
-AUD_PKG ..> DATA_PKG
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/Raizes_PacotesSeguranca.puml)
 
 ### 2.2. Descrição dos pacotes
 
@@ -163,59 +119,9 @@ credencial da integração com a balança e os links temporários de envio de im
 
 #### 3.1.3. Diagrama de classes de análise
 
-```plantuml
-@startuml IdentityAccess_Classes
-title Pacote Identity & Access - Classes de Análise
+![Diagrama IdentityAccess_Classes](../assets/diagramas/IdentityAccess_Classes.svg)
 
-class Usuario {
-  -id: String
-  -nome: String
-  -email: String
-  -perfil: Admin/Produtor/Analista/Operador/Piloto/Gestor/Auditor
-  -escopo: List<CooperativaId>
-  -mfaHabilitado: Boolean
-  +autenticar(): Token
-  +autorizar(recurso, acao): Boolean
-}
-
-class Grupo {
-  -nome: String
-  -permissoes: List<String>
-}
-
-class IAMRole {
-  -nome: String
-  -funcaoLambda: String
-  +assumirRole(): Credentials
-}
-
-class IAMPolicy {
-  -nome: String
-  -documento: JSON
-  -efeito: Allow/Deny
-}
-
-class CredencialBalanca {
-  -cooperativaId: String
-  -status: Ativa/Revogada
-  -limiteRequisicoes: Integer
-  +revogar(): void
-  +rotacionar(): void
-}
-
-class LinkUpload {
-  -vistoriaId: String
-  -pilotoId: String
-  -prefixoS3: String
-  -expiraEm: DateTime
-  +gerar(): URL
-}
-
-Usuario "*" -- "1" Grupo : pertence
-Usuario "1" -- "*" LinkUpload : solicita
-IAMRole "1" -- "*" IAMPolicy : possui
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/IdentityAccess_Classes.puml)
 
 #### 3.1.4. Perfis e roles
 
@@ -294,38 +200,9 @@ Lambdas acessem serviços AWS sem NAT Gateway.
 
 #### 3.2.3. Diagrama de classes de análise
 
-```plantuml
-@startuml NetworkSecurity_Classes
-title Pacote Network Security - Classes de Análise
+![Diagrama NetworkSecurity_Classes](../assets/diagramas/NetworkSecurity_Classes.svg)
 
-class SecurityGroup {
-  -nome: String
-  -vpcId: String
-  +adicionarRegraEntrada(regra): void
-  +adicionarRegraSaida(regra): void
-}
-
-class Regra {
-  -protocolo: TCP
-  -porta: String
-  -origem: String
-  -acao: Allow
-}
-
-class VPCEndpoint {
-  -servico: S3/DynamoDB/SecretsManager/EventBridge
-  -tipo: Gateway/Interface
-}
-
-class EntradaHTTPS {
-  -servico: CloudFront/API Gateway
-  -versaoMinimaTLS: String
-  -waf: Boolean
-}
-
-SecurityGroup "1" -- "*" Regra : contém
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/NetworkSecurity_Classes.puml)
 
 #### 3.2.4. Matriz de Security Groups
 
@@ -368,38 +245,9 @@ não possam ser alteradas nem apagadas durante a retenção.
 
 #### 3.3.3. Diagrama de classes de análise
 
-```plantuml
-@startuml DataProtection_Classes
-title Pacote Data Protection - Classes de Análise
+![Diagrama DataProtection_Classes](../assets/diagramas/DataProtection_Classes.svg)
 
-class KMSKey {
-  -keyId: String
-  -alias: String
-  -rotacaoHabilitada: Boolean
-  +encrypt(dados): Bytes
-  +decrypt(dados): Bytes
-}
-
-class EncryptionConfig {
-  -servico: String
-  -tipo: SSE-KMS/RDS-Encryption
-  +aplicar(): void
-}
-
-class Evidencia {
-  -evidenciaId: String
-  -talhaoId: String
-  -versaoPoligono: Integer
-  -datasets: List<String>
-  -hashSHA256: String
-  -retencaoAte: Date
-  +verificarIntegridade(): Boolean
-}
-
-EncryptionConfig "1" -- "1" KMSKey : usa
-Evidencia "*" -- "1" KMSKey : protegida por
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/DataProtection_Classes.puml)
 
 #### 3.3.4. Matriz de criptografia
 
@@ -435,27 +283,9 @@ Impedir que credenciais apareçam em código, configuração ou logs (RNF-SEG-05
 
 #### 3.4.3. Diagrama de classes de análise
 
-```plantuml
-@startuml SecretsManagement_Classes
-title Pacote Secrets Management - Classes de Análise
+![Diagrama SecretsManagement_Classes](../assets/diagramas/SecretsManagement_Classes.svg)
 
-class Segredo {
-  -nome: String
-  -rotacaoHabilitada: Boolean
-  -valor: String (criptografado)
-  +getValor(): String
-  +rotacionar(): void
-}
-
-class PoliticaRotacao {
-  -frequenciaDias: Integer
-  -lambdaArn: String
-  +executar(): void
-}
-
-Segredo "1" -- "0..1" PoliticaRotacao : usa
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/SecretsManagement_Classes.puml)
 
 #### 3.4.4. Segredos gerenciados
 
@@ -492,41 +322,9 @@ LGPD (RNF-SEG-07) e permitir gerar o pacote auditável (UC-FUN-010).
 
 #### 3.5.3. Diagrama de classes de análise
 
-```plantuml
-@startuml AuditCompliance_Classes
-title Pacote Audit & Compliance - Classes de Análise
+![Diagrama AuditCompliance_Classes](../assets/diagramas/AuditCompliance_Classes.svg)
 
-class EventoAuditoria {
-  -ator: String
-  -recurso: String
-  -acao: String
-  -timestamp: DateTime
-  -correlationId: String
-}
-
-class TrilhaAuditoria {
-  +consultar(filtro): List<EventoAuditoria>
-}
-
-class PacoteAuditavel {
-  -alvo: Produtor/Lote
-  -evidencias: List<Evidencia>
-  -geradoEm: DateTime
-  +gerar(): URL
-  +verificarHashes(): Boolean
-}
-
-class InventarioDado {
-  -categoria: String
-  -finalidade: String
-  -baseLegal: String
-  -retencao: String
-}
-
-TrilhaAuditoria "1" -- "*" EventoAuditoria : contém
-PacoteAuditavel "1" -- "*" EventoAuditoria : inclui
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/AuditCompliance_Classes.puml)
 
 #### 3.5.4. Eventos auditados
 
@@ -592,63 +390,15 @@ uma aplicação Django em containers, organizada nos pacotes abaixo.
 
 ### 6.1. Diagrama de pacotes
 
-```plantuml
-@startuml pacotes_release1
-skinparam packageStyle rectangle
-left to right direction
+![Diagrama pacotes_release1](../assets/diagramas/pacotes_release1.svg)
 
-package "Infraestrutura" as INF {
-  [Dockerfile]
-  [docker-compose.yml]
-  [scripts/deploy_ec2.sh]
-  [scripts/backup_db.sh]
-}
-
-package "Segurança" as SEG {
-  [.env / .env.example]
-  [Security Group 22 e 8000]
-  [settings por variáveis]
-}
-
-package "conifg (projeto Django)" as CFG {
-  [settings.py]
-  [urls.py]
-  [wsgi.py]
-}
-
-package "API (DRF)" as API {
-  [views.py: ViewSets]
-  [serializers.py]
-}
-
-package "lavouraInteligente (app)" as APP {
-  [models.py]
-  [admin.py]
-  [management: bootstrap, seed]
-  [tests.py]
-}
-
-package "Dados (PostgreSQL 16)" as DAT {
-  [tabelas relacionais]
-  [JSONB + índice GIN]
-  [volume pgdata]
-}
-
-API --> APP : usa models
-CFG --> API : rotas /api/
-CFG --> SEG : lê .env
-APP --> DAT : ORM / migrations
-INF --> CFG : executa (Gunicorn)
-INF --> DAT : container db
-INF --> SEG : gera .env (chmod 600)
-@enduml
-```
+[Fonte PlantUML](../assets/diagramas/pacotes_release1.puml)
 
 ### 6.2. Descrição e dependências
 
 | Pacote | Responsabilidade | Depende de |
 | -- | -- | -- |
-| `conifg` | configuração do Django, rotas e WSGI | Segurança (variáveis), API |
+| `raizes_config` | configuração do Django, rotas e WSGI | Segurança (variáveis), API |
 | API (`views.py`, `serializers.py`) | CRUD, serializers aninhados, filtro JSON e recepção transacional do lote | `lavouraInteligente.models` |
 | `lavouraInteligente` | models do domínio (Produtor, Fazenda, Talhão, Lote, LoteTalhao), admin, seed, bootstrap e testes | Dados |
 | Dados | tabelas relacionais, JSONB com GIN, volume `pgdata` | Infraestrutura |
@@ -681,6 +431,6 @@ pacote lê segredos de arquivo versionado.
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Arquiteto de Soluções | | | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
 | Responsável de Segurança | | | Pendente |
-| Professor responsável | | | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

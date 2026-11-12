@@ -5,7 +5,7 @@ title: Dimensionamento de Banco de Dados
 
 # Modelo de Análise — Dimensionamento de Banco de Dados (v1.0)
 
-**Projeto**: Lavoura Inteligente — Rastreabilidade Agrícola e Conformidade EUDR<br>
+**Projeto**: Raízes — Rastreabilidade Agrícola e Conformidade EUDR<br>
 **Fase**: Elaboração<br>
 **Release**: 1 (AP2) — PostgreSQL 16 em container, volume Docker `pgdata`<br>
 **Status**: Em revisão
@@ -71,7 +71,7 @@ arquitetura final vão para o S3 (RNF-CUS-03 e RNF-CUS-06).
 | Volume `pgdata` no ano 3 | ~2 GB |
 | Backups locais (7 dumps diários compactados) | ~1 GB |
 | Folga para logs, build e atualizações | ~10 GB |
-| **Volume escolhido** | **30 GB gp3** (3.000 IOPS e 125 MB/s de base) |
+| **Volume recomendado** | **30 GB gp3** (3.000 IOPS e 125 MB/s de base); sistema de arquivos real encontrado: 8 GiB |
 
 Custo de referência do EBS gp3 (us-east-2): US$ 0,08/GB-mês × 30 GB = **~US$ 2,40/mês**.
 
@@ -83,24 +83,27 @@ Custo de referência do EBS gp3 (us-east-2): US$ 0,08/GB-mês × 30 GB = **~US$ 
 | -- | -- |
 | Ferramenta | `pg_dump` lógico, executado por `scripts/backup_db.sh` |
 | Frequência | diária, agendada no `cron` da EC2 (ex.: `0 3 * * * bash ~/PC_ADS_26.2_8001_II/scripts/backup_db.sh`) |
-| Retenção | 7 diários na EC2 e cópia para o S3 com 7 diários + 4 semanais |
+| Retenção | Dumps locais sem rotação automática; 7 diários e cópia S3 são política planejada, ainda não implementada |
 | Tamanho do dump | ~25–35% do banco após gzip (~150 MB no ano 1) |
 | Custo no S3 | ~11 dumps × 0,15 GB × US$ 0,023 = **< US$ 0,05/mês** |
 | RPO | **24 h** (intervalo entre dumps) |
 | RTO | **< 30 min**: subir a stack, restaurar o dump e conferir as contagens |
 
-### 5.2. Procedimento de restauração (testado)
+### 5.2. Restauração em banco separado (validação sem sobrescrever produção)
+
+O roteiro abaixo cria um banco de validação independente; nunca restaure por cima do banco em uso durante uma demonstração.
 
 ```bash
 cd ~/PC_ADS_26.2_8001_II/src
-docker compose up -d db
-gunzip -c backups/<arquivo>.sql.gz | docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
-docker compose up -d web
+bash ../scripts/backup_db.sh
+docker compose exec -T db sh -c 'createdb -U "$POSTGRES_USER" restore_ap2_validacao'
+gunzip -c backups/ARQUIVO_GERADO.sql.gz | docker compose exec -T db sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d restore_ap2_validacao'
+# Compare contagens e índices do banco restaurado com o banco original.
+# Remova somente o banco de validação depois da conferência.
+docker compose exec -T db sh -c 'dropdb -U "$POSTGRES_USER" restore_ap2_validacao'
 ```
 
-Teste da equipe: o dump do banco com o seed foi restaurado num banco novo
-(`restore_teste`), com as mesmas contagens (4 talhões, 1 lote) e o índice
-`talhao_atributos_gin` recriado.
+O registro da execução desta entrega está em [Validação da AP2](../Transicao/validacao_ap2.md). O objetivo de RTO inferior a 30 minutos para recuperação completa de uma instância permanece sujeito a ensaio; um restore pequeno não prova esse cenário.
 
 ### 5.3. Lacuna em relação à meta final
 
@@ -114,7 +117,7 @@ seção 6.
 | Critério | Volume Docker na EC2 (Release 1) | Amazon RDS for PostgreSQL |
 | -- | -- | -- |
 | Custo mensal* | incluso na EC2 + EBS (~US$ 2,40 de disco) | db.t4g.micro Single-AZ ~US$ 11,68 + 20 GB gp3 ~US$ 2,30; Multi-AZ ~2x |
-| Backup | manual (`pg_dump` + cron + S3) | automático, com PITR de até 35 dias |
+| Backup | `pg_dump` + cron locais; cópia S3 ainda planejada | automático, com PITR de até 35 dias |
 | RPO / RTO | 24 h / < 30 min | ~5 min (PITR) / minutos (Multi-AZ com failover) |
 | Alta disponibilidade | não (mesma instância do web) | Multi-AZ opcional |
 | Atualização e patches | responsabilidade da equipe (`image: postgres:16`) | gerenciados pela AWS |
@@ -145,5 +148,5 @@ horizontalmente.
 
 | Papel aprovador | Nome | Data | Decisão |
 | -- | -- | -- | -- |
-| Arquiteto de Soluções | | | Pendente |
-| Professor responsável | | | Pendente |
+| Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
+| Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |

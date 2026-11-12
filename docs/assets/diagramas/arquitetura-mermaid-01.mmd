@@ -1,0 +1,13 @@
+flowchart LR
+    U([Usuários e balança]) -->|HTTP :8000| SG{{Security Group<br/>22 e 8000}}
+    subgraph EC2[EC2 t3.small - Amazon Linux 2023]
+      subgraph Compose[Docker Compose]
+        W[web<br/>Django + DRF + Gunicorn + WhiteNoise]
+        D[(db<br/>PostgreSQL 16)]
+      end
+      V[(volume pgdata)]
+    end
+    SG --> W
+    W -->|rede interna| D
+    D --- V
+    GH[GitHub] -->|git pull| EC2

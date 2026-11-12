@@ -1,0 +1,30 @@
+@startuml DataProtection_Classes
+title Pacote Data Protection - Classes de Análise
+
+class KMSKey {
+  -keyId: String
+  -alias: String
+  -rotacaoHabilitada: Boolean
+  +encrypt(dados): Bytes
+  +decrypt(dados): Bytes
+}
+
+class EncryptionConfig {
+  -servico: String
+  -tipo: SSE-KMS/RDS-Encryption
+  +aplicar(): void
+}
+
+class Evidencia {
+  -evidenciaId: String
+  -talhaoId: String
+  -versaoPoligono: Integer
+  -datasets: List<String>
+  -hashSHA256: String
+  -retencaoAte: Date
+  +verificarIntegridade(): Boolean
+}
+
+EncryptionConfig "1" -- "1" KMSKey : usa
+Evidencia "*" -- "1" KMSKey : protegida por
+@enduml

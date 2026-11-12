@@ -1,0 +1,49 @@
+@startuml Raizes_PacotesSeguranca
+skinparam roundCorner 12
+skinparam packageStyle rectangle
+title Modelo de Análise (Pacotes) - Segurança Raízes
+
+package "Identity & Access" as IAM_PKG #E8F0FE {
+  [Cognito User Pool]
+  [Grupos por perfil]
+  [MFA]
+  [IAM Roles por Lambda]
+  [Credencial da balança]
+  [Link temporário de upload]
+}
+
+package "Network Security" as NET_PKG #FFF4E5 {
+  [VPC privada]
+  [Security Groups]
+  [VPC Endpoints]
+  [TLS / CloudFront / API Gateway]
+  [WAF]
+}
+
+package "Data Protection" as DATA_PKG #E8F5E9 {
+  [KMS Keys]
+  [RDS/PostGIS Encryption]
+  [DynamoDB Encryption]
+  [S3 Encryption]
+  [Object Lock + Hash]
+}
+
+package "Secrets Management" as SEC_PKG #FCE4EC {
+  [Secrets Manager]
+  [Rotation Policies]
+}
+
+package "Audit & Compliance" as AUD_PKG #EDE7F6 {
+  [CloudTrail]
+  [Trilha da aplicação]
+  [Pacote auditável]
+  [Inventário LGPD]
+}
+
+NET_PKG --> IAM_PKG
+IAM_PKG --> DATA_PKG
+DATA_PKG --> SEC_PKG
+AUD_PKG ..> IAM_PKG
+AUD_PKG ..> NET_PKG
+AUD_PKG ..> DATA_PKG
+@enduml

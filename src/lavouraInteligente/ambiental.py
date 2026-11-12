@@ -94,6 +94,9 @@ def evaluate(polygon,datasets,buffer_m=100):
           'Consulta pública pode ter defasagem. MapBiomas e Sentinel não integrados nesta análise.']}
 
 def analyze(pk,actor=None):
+    from .models import CenarioSimulado
+    if CenarioSimulado.objects.filter(talhao_id=pk).exists():
+        raise ValueError('Consulta real não pode substituir evidências de um cenário simulado.')
     before=Talhao.objects.get(pk=pk)
     polygon=before.poligono
     sha=hashlib.sha256(canonical(polygon)).hexdigest()

@@ -11,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument('--somente-cloud',action='store_true')
     def handle(self,*args,**options):
         if not options['somente_cloud']:
-            rows=Talhao.objects.order_by('id')
+            rows=Talhao.objects.filter(cenario_simulado__isnull=True).order_by('id')
             if options['talhao']:rows=rows.filter(pk=options['talhao'])
             for pk in rows.values_list('id',flat=True)[:options['limite']]:
                 try:

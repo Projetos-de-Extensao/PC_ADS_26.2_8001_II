@@ -1,5 +1,5 @@
 {% load static %}<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><link rel="icon" type="image/svg+xml" href="{% static 'raizes/marca.svg' %}"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#183e2c"><title>Raízes · Rastreabilidade agrícola</title><link rel="stylesheet" href="{% static 'raizes/portal.css' %}"><script src="{% static 'raizes/portal.js' %}" defer></script></head>
+<html lang="pt-BR"><head><meta charset="utf-8"><link rel="icon" type="image/svg+xml" href="{% static 'raizes/marca.svg' %}"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#183e2c"><title>Raízes · Rastreabilidade agrícola</title><link rel="stylesheet" href="{% static 'raizes/portal.css' %}"><link rel="stylesheet" href="{% static 'raizes/laboratorio.css' %}"><script src="{% static 'raizes/laboratorio.js' %}" defer></script><script src="{% static 'raizes/portal.js' %}" defer></script></head>
 <body>
 <svg class="sprite" xmlns="http://www.w3.org/2000/svg"><defs>
 <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
@@ -34,11 +34,16 @@
   <a href="#vistorias" data-route="vistorias"><svg><use href="#i-drone"/></svg>Vistorias</a>
   <a href="#integracoes" data-route="integracoes"><svg><use href="#i-leaf"/></svg>Monitoramento ambiental</a>
   <a href="#historico" data-route="historico"><svg><use href="#i-clock"/></svg>Histórico e evidências</a>
+  <span class="nav-caption">APRESENTAÇÃO</span>
+  <a href="#laboratorio" data-route="laboratorio"><svg><use href="#i-drone"/></svg>Laboratório</a>
+  <a href="#relatorios" data-route="relatorios"><svg><use href="#i-file"/></svg>Relatórios</a>
+  <a href="#guia" data-route="guia"><svg><use href="#i-leaf"/></svg>Como funciona</a>
  </nav>
  <div class="sidebar-bottom"><div class="connection"><i></i><span id="connection-label">Conectando ao sistema</span></div><p>Cada origem conta.<br>Cada decisão fica registrada.</p><a href="/admin/">Administração do sistema <span>↗</span></a></div>
 </aside>
 <div class="app-shell">
  <header class="topbar"><div class="breadcrumb">Raízes <span>/</span> <strong id="breadcrumb">Visão geral</strong></div><div class="topbar-tools"><label class="global-search"><svg><use href="#i-search"/></svg><input id="global-search" type="search" placeholder="Buscar um talhão, fazenda..." aria-label="Buscar um talhão ou fazenda"><kbd>↵</kbd></label><button class="icon-button notification-button" id="notifications" aria-label="Ver atualizações"><svg><use href="#i-bell"/></svg><i id="notification-dot" hidden></i></button><div class="profile"><span id="profile-initials">EQ</span><div><strong id="profile-name">Equipe</strong><small id="profile-role">Cooperativa</small></div></div><form action="/sair/" method="post">{% csrf_token %}<button class="logout" type="submit">Sair</button></form></div></header>
+ <div class="academic-banner">Demonstração acadêmica · Cadastros fictícios e cenários virtuais identificados. As consultas reais do INPE ficam em Monitoramento ambiental.</div>
  <main id="main" tabindex="-1"><div class="loading"><span class="spinner"></span><h1>Preparando sua visão de campo</h1><p>Carregando os dados da cooperativa.</p></div></main>
  <footer class="app-footer"><span>Raízes · Rastreabilidade agrícola</span><span>Classificação de risco operacional. Não constitui certificação jurídica.</span></footer>
 </div>

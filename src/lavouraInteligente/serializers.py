@@ -21,6 +21,9 @@ class TalhaoSerializer(serializers.ModelSerializer):
         previous=self.instance.atributos.get('analise_ambiental') if self.instance else None
         if value.get('analise_ambiental')!=previous:
             raise serializers.ValidationError('A análise ambiental é gerenciada pelo sistema; use a ação Consultar INPE.')
+        for key in ['ambiente','simulacao']:
+            previous=self.instance.atributos.get(key) if self.instance else None
+            if value.get(key)!=previous:raise serializers.ValidationError('A identificação de simulação é gerenciada pelo laboratório.')
         return value
 
     def validate_poligono(self,value):
@@ -72,6 +75,20 @@ class ProdutorSerializer(serializers.ModelSerializer):
 class LoteTalhaoSerializer(serializers.ModelSerializer):
     talhao_codigo = serializers.CharField(source="talhao.codigo", read_only=True)
 
+    def validate(self,data):
+        lote=data.get('lote',self.instance.lote if self.instance else None)
+        talhao=data.get('talhao',self.instance.talhao if self.instance else None)
+        if lote and hasattr(lote,'decisao'):
+            raise serializers.ValidationError('Lote com decisão registrada não permite alterar origens.')
+        if lote and talhao:
+            from .models import CenarioSimulado
+            simulated=CenarioSimulado.objects.filter(talhao=talhao).exists()
+            others=lote.itens.exclude(pk=self.instance.pk if self.instance else None)
+            for item in others.select_related('talhao'):
+                if CenarioSimulado.objects.filter(talhao=item.talhao).exists()!=simulated:
+                    raise serializers.ValidationError('Não misture origens simuladas e operacionais.')
+        return data
+
     class Meta:
         model = LoteTalhao
         fields = ["id", "lote", "talhao", "talhao_codigo", "peso_kg"]
@@ -79,10 +96,14 @@ class LoteTalhaoSerializer(serializers.ModelSerializer):
 
 class LoteSerializer(serializers.ModelSerializer):
     itens = LoteTalhaoSerializer(many=True, read_only=True)
+    simulado = serializers.SerializerMethodField()
+
+    def get_simulado(self,obj):
+        return obj.itens.filter(talhao__cenario_simulado__isnull=False).exists()
 
     class Meta:
         model = Lote
-        fields = ["id", "codigo", "recebido_em", "peso_total_kg", "status", "motivo", "itens"]
+        fields = ["id", "codigo", "recebido_em", "peso_total_kg", "status", "motivo", "itens", "simulado"]
 
 
 class ItemRecebimentoSerializer(serializers.Serializer):

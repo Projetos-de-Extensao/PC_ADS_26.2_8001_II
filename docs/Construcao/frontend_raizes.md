@@ -79,7 +79,7 @@ Git e da imagem de build. Cada imagem recebida possui tamanho, autor, data e has
 
 ## Validação e execução
 
-Os 40 testes automatizados cobrem também os contratos de autenticação, CSRF, revisão,
+Os 62 testes automatizados cobrem também os contratos de autenticação, CSRF, revisão,
 decisão, vistoria, arquivos e exportação. O roteiro de navegador verifica os fluxos com
 um banco separado de QA. Nenhum desses testes altera o banco da EC2.
 
@@ -98,3 +98,13 @@ raiz `/`, e a API permanece em `/api/`. O deploy preserva o volume PostgreSQL e 
 A tela **Monitoramento ambiental** consulta INPE/DETER, registra resultado e validade,
 permite baixar snapshots e apresenta a fila AWS. Alertas aparecem tracejados no mapa
 quando há zoom suficiente.
+
+## Laboratório e guia de apresentação
+
+**Laboratório** acrescenta seis cenários sintéticos, voo virtual com cobertura/data e
+envio em partes retomável, preservado pela migration `0004`. **Relatórios** agrupa os
+dados e exibe a outbox; **Como funciona** explica operação, infraestrutura atual e os
+serviços da arquitetura-alvo. O [guia completo](guia_simulacao.md) fornece um roteiro.
+Os perfis são aplicados no servidor e refletidos nos controles visíveis.
+O limite convencional de imagem continua 20 MB; os 5 GiB do laboratório são metadados
+de um exercício virtual, sem transferência de arquivo desse tamanho.

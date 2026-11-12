@@ -3,6 +3,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from django.contrib.auth import views as auth_views
 from lavouraInteligente import portal
+from lavouraInteligente import laboratorio
 
 from lavouraInteligente.views import (
     FazendaViewSet,
@@ -24,6 +25,15 @@ urlpatterns = [
     path('entrar/', auth_views.LoginView.as_view(template_name='raizes/login.html'), name='login'),
     path('sair/', auth_views.LogoutView.as_view(), name='logout'),
     path('app/estado/', portal.estado, name='portal_estado'),
+    path('app/laboratorio/', laboratorio.estado),
+    path('app/laboratorio/executar/', laboratorio.executar),
+    path('app/laboratorio/<uuid:pk>/voos/', laboratorio.iniciar),
+    path('app/laboratorio/voos/<uuid:pk>/partes/', laboratorio.parte),
+    path('app/laboratorio/voos/<uuid:pk>/finalizar/', laboratorio.finalizar),
+    path('app/laboratorio/voos/<uuid:pk>/cancelar/', laboratorio.cancelar),
+    path('app/laboratorio/voos/<uuid:pk>/desenho/', laboratorio.desenho),
+    path('app/relatorios/', laboratorio.relatorios),
+    path('app/relatorios/exportar/', laboratorio.exportar_csv),
     path('app/integracoes/', portal.integracoes),
     path('app/analises/<int:pk>/', portal.evidencia_ambiental),
     path('app/talhoes/<int:pk>/analisar/', portal.analisar_ambiental),

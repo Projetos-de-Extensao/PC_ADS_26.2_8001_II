@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from .models import (ArquivoVistoria, DecisaoRecebimento, EventoAuditoria, Fazenda,
                      Lote, LoteTalhao, Produtor, RevisaoStatus, Talhao, Vistoria,
-                     AnaliseAmbiental, EntregaCloud)
+                     AnaliseAmbiental, EntregaCloud, CenarioSimulado, UploadSimulado)
 
 
 class FazendaInline(admin.TabularInline):
@@ -59,7 +59,7 @@ admin.site.site_header = "Raízes — Rastreabilidade Agrícola"
 admin.site.site_title = "Raízes"
 admin.site.index_title = "Administração do Raízes"
 
-@admin.register(EventoAuditoria, RevisaoStatus, DecisaoRecebimento, ArquivoVistoria, AnaliseAmbiental, EntregaCloud)
+@admin.register(EventoAuditoria, RevisaoStatus, DecisaoRecebimento, ArquivoVistoria, AnaliseAmbiental, EntregaCloud, CenarioSimulado, UploadSimulado)
 class RegistroPreservadoAdmin(admin.ModelAdmin):
     def has_add_permission(self,request): return False
     def has_change_permission(self,request,obj=None): return False

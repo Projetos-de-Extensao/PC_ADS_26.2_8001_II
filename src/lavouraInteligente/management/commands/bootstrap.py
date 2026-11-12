@@ -11,6 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         call_command("collectstatic", interactive=False, verbosity=0)
         call_command("migrate", interactive=False)
+        call_command("configurar_perfis", verbosity=0)
 
         usuario = os.environ.get("DJANGO_SUPERUSER_USERNAME")
         senha = os.environ.get("DJANGO_SUPERUSER_PASSWORD")

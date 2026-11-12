@@ -26,11 +26,11 @@ atributos de qualidade estão no Documento de Requisitos Suplementares.
 | RN-04 | Recebimento/decisão conferem geometria, hash e validade do cálculo existente. Consulta ambiental incompleta permanece em revisão; regras de defasagem específicas de cada fonte ainda exigem evolução. |
 | RF-RSK-05 / RN-06 | Portal: revisão com justificativa, autor, antes/depois e snapshot original. API não permite forjar status/validade da análise. Admin e SQL ainda exigem governança fora da matriz completa do produto. |
 | RF-HIS-01 | Proposta do frontend: painel, mapa SVG por status, busca e filtros por produtor/município/status. Histórico operacional persistido e filtrável; Athena continua futuro. |
-| RF-IDN | Portal com equipe/sessão/CSRF; API com leitura pública e gravação restrita à equipe. Cognito/MFA e segregação por cooperativa permanecem pendentes. |
+| RF-IDN | Portal com equipe/sessão/CSRF; API com leitura pública e gravação restrita à equipe. Grupos Django aplicam perfis funcionais; Cognito/MFA e segregação por cooperativa permanecem na arquitetura-alvo. |
 | RN-09 | Futuro: o CRUD atual faz exclusão física; retenção e exclusão lógica ainda não implementadas. |
-| RF-DRN | Proposta: solicitar/agendar/receber imagens e preservar hash. Recepção local até 20 MB; upload retomável de 5 GB, georreferência automática e cobertura ainda pendentes. |
+| RF-DRN | Proposta: solicitar/agendar/receber imagens e preservar hash. Recepção convencional até 20 MB. Laboratório valida cobertura/data e envio virtual em partes; GeoTIFF e transferência real de 5 GB permanecem na arquitetura-alvo. |
 | RF-AUD | Histórico, exportação com SHA-256 e arquivamento JSON em S3 versionado; Object Lock e retenção completa de cinco anos permanecem pendentes. |
-| RF-AMB, RF-ALT; demais RF-RSK/RF-HIS | INPE/DETER real, análise Shapely/PROJ, snapshots, worker, DynamoDB e publicação SNS implantados. MapBiomas/Sentinel, Athena e deduplicação integral de datasets permanecem pendentes. |
+| RF-AMB, RF-ALT; demais RF-RSK/RF-HIS | INPE/DETER real, análise Shapely/PROJ, snapshots, worker, DynamoDB e publicação SNS implantados. MapBiomas/Sentinel sintéticos e SQL/CSV exercitam os papéis no laboratório; APIs reais desses provedores, Athena e deduplicação integral permanecem na arquitetura-alvo. |
 
 Os critérios completos abaixo permanecem como especificação do produto, não como declaração de implementação integral.
 
@@ -169,3 +169,6 @@ Os critérios completos abaixo permanecem como especificação do produto, não 
 | Representante de negócio | Não designado pela equipe | Não registrada | Pendente |
 | Arquiteto de Soluções | Responsável a confirmar pela equipe | Não registrada | Pendente |
 | Professor responsável | Jonh Carvalho | Não registrada | Pendente de avaliação |
+
+O [guia de operação e simulação](../Construcao/guia_simulacao.md) descreve a evolução acadêmica,
+a distinção entre dados fictícios e serviços reais e o roteiro para apresentação.

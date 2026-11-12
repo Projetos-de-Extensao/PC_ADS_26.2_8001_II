@@ -29,6 +29,7 @@ nav:
       - Deploy EC2 + Docker (PostgreSQL): Construcao/deploy_ec2_postgres.md
       - Frontend Raízes: Construcao/frontend_raizes.md
       - Integrações AWS e ambientais: Construcao/integracoes_aws_ambientais.md
+      - Guia de operação e simulação: Construcao/guia_simulacao.md
   - Transição:
       - Index: Transicao/index.md
       - Estratégias de Deploy: Transicao/ativ_deploy.md

@@ -17,7 +17,7 @@ class Command(BaseCommand):
                     c.execute('SELECT pg_try_advisory_lock(7240,1)');acquired=c.fetchone()[0]
                 if acquired:
                     try:
-                        for pk in Talhao.objects.order_by('id').values_list('id',flat=True)[:100]:
+                        for pk in Talhao.objects.filter(cenario_simulado__isnull=True).order_by('id').values_list('id',flat=True)[:100]:
                             recent=AnaliseAmbiental.objects.filter(talhao_id=pk,criado_em__gte=timezone.now()-timedelta(hours=24)).exists()
                             if not recent:
                                 with connection.cursor() as c:

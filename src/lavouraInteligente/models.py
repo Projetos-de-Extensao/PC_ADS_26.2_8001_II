@@ -1,6 +1,7 @@
 from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 from django.conf import settings
+import uuid
 
 
 class StatusRisco(models.TextChoices):
@@ -180,3 +181,36 @@ class EntregaCloud(models.Model):
 
     class Meta:
         ordering = ['id']
+
+
+class CenarioSimulado(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    idempotencia = models.UUIDField(unique=True,default=uuid.uuid4)
+    talhao = models.OneToOneField(Talhao,on_delete=models.PROTECT,related_name='cenario_simulado')
+    cenario = models.CharField(max_length=30)
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True)
+    dados = models.JSONField(default=dict)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+
+
+class UploadSimulado(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    cenario = models.ForeignKey(CenarioSimulado,on_delete=models.PROTECT,related_name='uploads')
+    vistoria = models.ForeignKey(Vistoria,on_delete=models.PROTECT,related_name='voos_simulados')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True)
+    perfil_voo = models.CharField(max_length=30)
+    poligono_sha256 = models.CharField(max_length=64)
+    cobertura = models.JSONField(null=True)
+    data_voo = models.DateField()
+    tamanho_declarado = models.PositiveBigIntegerField(default=5*1024**3)
+    total_partes = models.PositiveIntegerField(default=10)
+    partes = models.JSONField(default=dict)
+    status = models.CharField(max_length=30,default='EM_ENVIO')
+    validacao = models.JSONField(default=dict)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']

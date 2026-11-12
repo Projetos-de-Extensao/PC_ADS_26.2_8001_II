@@ -96,7 +96,10 @@ ser registrada separadamente após provisionamento e envio na EC2.
 
 ## Limites e evolução
 
-MapBiomas Alerta, Sentinel/NDVI e análise espectral ainda não estão integrados.
+MapBiomas Alerta e Sentinel reais ainda não estão integrados. O [Laboratório](guia_simulacao.md)
+representa esses papéis com fontes sintéticas, NDVI de bandas fictícias e seis cenários.
+O voo virtual valida cobertura geométrica/data e exercita retomada de metadados em partes;
+nenhuma fotografia real ou transferência de 5 GiB é apresentada como realizada.
 As fontes mencionadas em atributos dos dados de seed são exemplos e não ingestões.
 Também permanecem pendentes: RDS/PostGIS, Lambda/API Gateway/EventBridge, Athena/Parquet,
 Cognito/MFA e autorização por cooperativa; multipart de 5 GB; GeoTIFF georreferenciado
@@ -104,6 +107,11 @@ com data e cobertura de 95%; Object Lock/KMS próprio; exclusão lógica e pacot
 retenção integral. O worker Compose substitui apenas o agendamento desta demonstração.
 O registro de versões pela API não cobre edições diretas no SQL ou Django Admin.
 As metas de 25 mil talhões, RPO/RTO e SLA da arquitetura exigem validação própria.
+
+Na evolução acadêmica, grupos Django aplicam perfis de gestor, analista, operador da
+balança, piloto e auditor. Relatórios usam SQL/CSV; o dossiê inclui geometrias, análises,
+datasets, auditoria e metadados de voos, com hash por arquivo. Os serviços de produção
+acima continuam na arquitetura-alvo, com equivalentes de papel no protótipo.
 
 ## Custos
 

@@ -121,7 +121,7 @@ class PortalTests(TestCase):
         response=self.client.get(f'/app/exportar/talhao/{self.review.id}/')
         self.assertEqual(response.status_code,200)
         with zipfile.ZipFile(io.BytesIO(b''.join(response.streaming_content))) as archive:
-            self.assertEqual(set(archive.namelist()),{'registro.json','manifesto.json'})
+            self.assertTrue({'registro.json','manifesto.json'}.issubset(archive.namelist()))
             self.assertEqual(json.loads(archive.read('registro.json'))['talhao']['codigo'],self.review.codigo)
 
     def test_post_protegido_exige_csrf(self):

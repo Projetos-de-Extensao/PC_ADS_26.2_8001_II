@@ -44,7 +44,7 @@ def deliver(row):
             if exc.response['Error']['Code']!='ConditionalCheckFailedException':raise
     elif row.tipo=='ALERTA':
         client('sns').publish(TopicArn=os.environ['RAIZES_SNS_TOPIC_ARN'],
-            Subject='Raizes: mudanca de risco ambiental',Message=json.dumps(payload,ensure_ascii=False))
+            Subject='Raizes: '+('SIMULACAO de risco ambiental' if payload.get('simulado') else 'mudanca de risco ambiental'),Message=json.dumps(payload,ensure_ascii=False))
     else:raise ValueError('Tipo de entrega desconhecido')
 
 def flush(limit=100):

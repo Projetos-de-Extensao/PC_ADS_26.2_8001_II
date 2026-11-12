@@ -10,7 +10,7 @@ const dateOnly = value => value ? new Intl.DateTimeFormat('pt-BR',{day:'2-digit'
 const labelStatus = {APROVADO:'Aprovado',REVISAO:'Em revisão',BLOQUEADO:'Bloqueado',SOLICITADA:'Solicitada',AGENDADA:'Agendada',RECEBIDA:'Recebida'};
 const statusClass = status => status==='REVISAO' || status==='SOLICITADA' ? 'review' : status==='BLOQUEADO' ? 'blocked' : ['AGENDADA','RECEBIDA'].includes(status) ? 'neutral' : '';
 const badge = status => `<span class="status ${statusClass(status)}">${esc(labelStatus[status] || status)}</span>`;
-const names = {inicio:'Visão geral',talhoes:'Talhões e mapa',lotes:'Recepção de lotes',produtores:'Produtores',fazendas:'Fazendas',vistorias:'Vistorias',historico:'Histórico e evidências',integracoes:'Monitoramento ambiental'};
+const names = {inicio:'Visão geral',talhoes:'Talhões e mapa',lotes:'Recepção de lotes',produtores:'Produtores',fazendas:'Fazendas',vistorias:'Vistorias',historico:'Histórico e evidências',integracoes:'Monitoramento ambiental',laboratorio:'Laboratório',relatorios:'Relatórios',guia:'Como funciona'};
 let state = null, brazil = null, route = 'inicio', mapBounds = null;
 let filters = {q:'',status:'',municipio:'',produtor:'',de:'',ate:''};
 let receiptItems = [], selectedTalhao = null;
@@ -55,6 +55,7 @@ async function refresh(renderPage=true) {
   $('#connection-label').textContent='Dados da cooperativa';
   $('#notification-dot').hidden=!state.historico.length;
   integrationState=await api('/app/integracoes/');
+  [laboratorioState,reportState]=await Promise.all([api('/app/laboratorio/'),api('/app/relatorios/')]);
   if (renderPage) render();
 }
 
@@ -81,7 +82,7 @@ function filteredPlots() {
 }
 function plotRows(plots) {
   return plots.map(t=>{const f=farm(t.fazenda),p=producer(f?.produtor);
-    return `<tr data-talhao="${t.id}"><td><strong>${esc(t.codigo)}</strong><small>${esc(t.cultura)}</small></td><td>${esc(f?.nome || '—')}<small>${esc(f?.municipio || '')} · ${esc(f?.uf || '')}</small></td><td>${esc(p?.nome || '—')}</td><td>${number(t.area_ha,2)} ha</td><td>${badge(t.status)}</td><td><button class="row-action" data-action="detail" data-id="${t.id}" aria-label="Ver ${esc(t.codigo)}">↗</button></td></tr>`;
+    return `<tr data-talhao="${t.id}"><td><strong>${esc(t.codigo)}${t.atributos?.ambiente==='SIMULACAO'?'<em class="sim-label">SIMULAÇÃO</em>':''}</strong><small>${esc(t.cultura)}</small></td><td>${esc(f?.nome || '—')}<small>${esc(f?.municipio || '')} · ${esc(f?.uf || '')}</small></td><td>${esc(p?.nome || '—')}</td><td>${number(t.area_ha,2)} ha</td><td>${badge(t.status)}</td><td><button class="row-action" data-action="detail" data-id="${t.id}" aria-label="Ver ${esc(t.codigo)}">↗</button></td></tr>`;
   });
 }
 
@@ -194,7 +195,7 @@ function integrationsPage() {
     `<div class="notice-inline">O DETER é um sistema de alertas. Uma consulta sem ocorrências permanece em revisão enquanto a cobertura das demais fontes não estiver completa. Cada análise registra o polígono, a consulta, o hash dos dados e a validade de 24 horas.</div>`+
     table(['Fonte','Disponibilidade'],data.fontes.map(f=>`<tr><td><strong>${esc(f.nome)}</strong></td><td>${esc(f.situacao)}</td></tr>`),'Situação das integrações ambientais')+
     `<div class="section-title"><div><h2>Analisar uma origem</h2><p>Consulta pública às camadas DETER Amazônia e Cerrado, com buffer de 100 metros.</p></div></div>`+
-    table(['Talhão','Status atual','Última análise',''],state.talhoes.map(t=>{const last=data.analises.find(a=>a.talhao===t.id);return `<tr><td><strong>${esc(t.codigo)}</strong><small>${esc(farm(t.fazenda)?.nome)}</small></td><td>${badge(t.status)}</td><td>${last?when(last.criado_em):'Não analisado'}</td><td>${actionButton('Consultar INPE','analyze',t.id,'small')}</td></tr>`;}),'Consultas limitadas a uma a cada cinco minutos por talhão')+
+    table(['Talhão','Status atual','Última análise',''],state.talhoes.map(t=>{const last=data.analises.find(a=>a.talhao===t.id);return `<tr><td><strong>${esc(t.codigo)}${t.atributos?.ambiente==='SIMULACAO'?'<em class="sim-label">SIMULAÇÃO</em>':''}</strong><small>${esc(farm(t.fazenda)?.nome)}</small></td><td>${badge(t.status)}</td><td>${last?when(last.criado_em):'Não analisado'}</td><td>${actionButton('Consultar INPE','analyze',t.id,'small')}</td></tr>`;}),'Consultas limitadas a uma a cada cinco minutos por talhão')+
     `<div class="section-title"><div><h2>Histórico de análises</h2></div></div>`+
     table(['Talhão','Resultado','Motivo e evidências','Validade'],data.analises.map(a=>`<tr><td><strong>${esc(a.codigo)}</strong><small>#${a.id} · ${when(a.criado_em)}</small></td><td>${badge(a.status)}</td><td style="max-width:400px;white-space:normal">${esc(a.resultado.motivo)}<small>${a.resultado.alertas?.length || 0} alerta(s) · ${a.resultado.fontes?.length || 0} consultas concluídas</small><a href="/app/analises/${a.id}/">Baixar evidências e GeoJSON</a></td><td>${when(a.valido_ate)}<small>${new Date(a.valido_ate)<new Date()?'Análise vencida':'Prazo de reconsulta'}</small></td></tr>`),'Snapshots preservados no PostgreSQL; arquivamento S3 pela fila AWS');
 }
@@ -205,14 +206,16 @@ function render() {
   $('#breadcrumb').textContent=names[route];
   $$('nav [data-route]').forEach(a=>a.classList.toggle('active',a.dataset.route===route));
   $('#sidebar').classList.remove('open');
-  const pages={inicio:homePage,talhoes:plotsPage,lotes:lotsPage,produtores:()=>recordsPage('produtores'),fazendas:()=>recordsPage('fazendas'),vistorias:inspectionsPage,historico:historyPage,integracoes:integrationsPage};
+  const pages={inicio:homePage,talhoes:plotsPage,lotes:lotsPage,produtores:()=>recordsPage('produtores'),fazendas:()=>recordsPage('fazendas'),vistorias:inspectionsPage,historico:historyPage,integracoes:integrationsPage,laboratorio:laboratoryPage,relatorios:reportsPage,guia:guidePage};
   $('#main').innerHTML=pages[route]();
+  applyAccess();
 }
 
 function modal(title,subtitle,body,footer,form='') {
   const inner=`<header class="modal-header"><div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div><button class="icon-button" type="button" data-action="close-modal" aria-label="Fechar">${icon('close')}</button></header><div class="modal-body"><div id="form-error" class="form-error" role="alert"></div>${body}</div>${footer?`<footer class="modal-footer">${footer}</footer>`:''}`;
   $('#modal-content').innerHTML=form?`<form id="${form}">${inner}</form>`:inner;
   if(!$('#modal').open)$('#modal').showModal();
+  applyAccess();
 }
 const cancel = '<button class="button" type="button" data-action="close-modal">Cancelar</button>';
 const save = text => `<button class="button primary" type="submit">${esc(text)}</button>`;
@@ -278,7 +281,7 @@ function renderOrigins() {
 function updateWeight(){if($('#distributed-weight'))$('#distributed-weight').textContent=number($$('.receipt-origin input').reduce((s,i)=>s+Number(i.value),0),2)+' kg';}
 function lotDetails(id,newReceipt=false) {
   const l=lot(id),d=state.decisoes[id];if(!l)return;
-  modal(newReceipt?'Origem consultada e lote registrado':'Detalhes do recebimento',l.codigo,
+  modal(newReceipt?'Origem consultada e lote registrado':'Detalhes do recebimento',l.codigo+(l.simulado?' · SIMULAÇÃO':''),
    `<div class="result-status ${statusClass(l.status)}"><span class="eyebrow">STATUS OPERACIONAL DO LOTE</span><h3>${esc(labelStatus[l.status])}</h3><p>${esc(l.motivo || 'Status informado no cadastro do lote.')}</p></div><div class="details-grid"><div><span class="detail-label">Peso total</span><span class="detail-value">${number(l.peso_total_kg,2)} kg</span></div><div><span class="detail-label">Recebimento</span><span class="detail-value">${when(l.recebido_em)}</span></div></div><section class="drawer-section"><h3>Talhões de origem</h3>${l.itens.map(i=>`<div class="attribute"><span>${esc(i.talhao_codigo)}</span><span>${number(i.peso_kg,2)} kg · ${badge(plot(i.talhao)?.status || l.status)}</span></div>`).join('') || '<p class="muted">Nenhuma origem associada.</p>'}</section>${d?`<section class="drawer-section"><h3>Decisão registrada: ${d.acao==='ACEITAR'?'aceito':'recusado'}</h3><p class="muted">${esc(d.justificativa)}</p><p class="form-hint">${esc(d.operador)} · ${when(d.criado_em)}</p></section>`:''}`,
    `<a class="button" href="/app/exportar/lote/${id}/">Exportar registro</a><button class="button" data-action="close-modal">Fechar</button>${!d?actionButton('Registrar decisão','decision',id,'primary'):''}`);
 }
@@ -412,7 +415,7 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape')closeDrawer(
 $('#notifications').addEventListener('click',()=>{
   modal('Atualizações da operação','As ações mais recentes registradas pela equipe.',`<ul class="timeline">${state.historico.slice(0,8).map(x=>`<li><strong>${esc(x.descricao)}</strong><small>${esc(x.ator)} · ${when(x.criado_em)}</small></li>`).join('') || '<li><strong>Nenhuma atualização registrada ainda.</strong></li>'}</ul>`,`<a href="#historico" class="button primary" data-action="close-modal">Ver histórico</a>`);
 });
-window.addEventListener('hashchange',()=>{if(!preserveFiltersOnHash)filters={q:'',status:'',municipio:'',produtor:'',de:'',ate:''};preserveFiltersOnHash=false;mapBounds=null;closeDrawer();render();});
+window.addEventListener('hashchange',()=>{if(!preserveFiltersOnHash)filters={q:'',status:'',municipio:'',produtor:'',de:'',ate:''};preserveFiltersOnHash=false;mapBounds=null;closeDrawer();render();window.scrollTo(0,0);});
 window.matchMedia('(max-width:720px)').addEventListener('change',()=>render());
 (async()=>{
   try {const response=await fetch('/static/raizes/brasil.geojson');brazil=await response.json();await refresh();}

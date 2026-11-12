@@ -37,10 +37,24 @@ class RegistroAuditoriaMixin:
 
     @transaction.atomic
     def perform_create(self,serializer):
+        if serializer.Meta.model is LoteTalhao:
+            serializer.validated_data['lote']=Lote.objects.select_for_update().get(pk=serializer.validated_data['lote'].pk)
+            serializer.validate(serializer.validated_data)
         self.registrar(serializer.save(),'CRIAR')
 
     @transaction.atomic
     def perform_update(self,serializer):
+        target=serializer.instance
+        lote=target if isinstance(target,Lote) else target.lote if isinstance(target,LoteTalhao) else None
+        if lote:
+            ids={lote.pk}
+            if isinstance(target,LoteTalhao) and 'lote' in serializer.validated_data:ids.add(serializer.validated_data['lote'].pk)
+            locked={row.pk:row for row in Lote.objects.select_for_update().filter(pk__in=ids).order_by('pk')}
+            if any(hasattr(row,'decisao') for row in locked.values()):
+                raise ReferenciaAtiva('Um lote com decisão registrada e seus itens não podem ser alterados.')
+            if isinstance(target,LoteTalhao):
+                serializer.validated_data['lote']=locked[serializer.validated_data.get('lote',lote).pk]
+                serializer.validate(serializer.validated_data)
         before=serializer.instance.poligono if isinstance(serializer.instance,Talhao) else None
         self.registrar(serializer.save(),'ALTERAR')
         if before is not None and before!=serializer.instance.poligono:
@@ -56,6 +70,10 @@ class RegistroAuditoriaMixin:
 
     @transaction.atomic
     def perform_destroy(self,instance):
+        lote=instance if isinstance(instance,Lote) else instance.lote if isinstance(instance,LoteTalhao) else None
+        if lote:lote=Lote.objects.select_for_update().get(pk=lote.pk)
+        if lote and hasattr(lote,'decisao'):
+            raise ReferenciaAtiva('Um lote com decisão registrada e seus itens são preservados.')
         if isinstance(instance,Produtor) and instance.fazendas.exists():raise ReferenciaAtiva()
         if isinstance(instance,Fazenda) and instance.talhoes.exists():raise ReferenciaAtiva()
         self.registrar(instance,'EXCLUIR')
@@ -129,9 +147,14 @@ class LoteViewSet(RegistroAuditoriaMixin, viewsets.ModelViewSet):
                 lote = Lote.objects.create(codigo=dados["codigo"], peso_total_kg=dados["peso_total_kg"])
                 soma = 0
                 vistos = set()
+                ambientes = set()
                 piores = {StatusRisco.BLOQUEADO: [], StatusRisco.REVISAO: []}
                 for item in dados["itens"]:
                     talhao = Talhao.objects.select_for_update().get(pk=item["talhao"].pk)
+                    from .models import CenarioSimulado
+                    ambientes.add(CenarioSimulado.objects.filter(talhao=talhao).exists())
+                    if len(ambientes)>1:
+                        raise RegraNegocioError('Um lote não pode misturar talhões do laboratório com origens operacionais.')
                     if talhao.pk in vistos:
                         raise RegraNegocioError(f"Talhão {talhao.codigo} repetido no mesmo lote.")
                     vistos.add(talhao.pk)

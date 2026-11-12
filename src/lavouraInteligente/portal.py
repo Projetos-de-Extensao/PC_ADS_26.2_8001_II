@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET, require_POST
 from .models import (ArquivoVistoria, DecisaoRecebimento, EventoAuditoria, Fazenda,
                      Lote, Produtor, RevisaoStatus, StatusRisco, Talhao, Vistoria)
 from .serializers import (FazendaSerializer, LoteSerializer, ProdutorSerializer, TalhaoSerializer)
+from .acesso import permite,capacidades,perfil
 
 
 @login_required
@@ -54,11 +55,15 @@ def integracoes(request):
 
 @login_required
 @require_POST
+@permite('analise')
 def analisar_ambiental(request,pk):
     if not request.user.is_staff:
         return JsonResponse({'detalhe':'Acesso restrito à equipe.'},status=403)
     from .ambiental import analyze
     get_object_or_404(Talhao,pk=pk)
+    from .models import CenarioSimulado
+    if CenarioSimulado.objects.filter(talhao_id=pk).exists():
+        return JsonResponse({'detalhe':'Este talhão pertence ao laboratório. As consultas reais permanecem separadas dos cenários virtuais.'},status=409)
     # Short-lived PostgreSQL advisory lock prevents parallel analyses without holding a
     # database row transaction open during the external HTTP requests.
     from django.db import connection
@@ -126,7 +131,7 @@ def estado(request):
         'ator':e.ator.get_username() if e.ator else 'API acadêmica'}
         for e in EventoAuditoria.objects.select_related('ator')[:500]]
     return JsonResponse({'usuario':{'nome':request.user.get_full_name() or request.user.get_username(),
-        'perfil':'Administrador' if request.user.is_superuser else 'Equipe da cooperativa'},
+        'perfil':perfil(request.user),'capacidades':sorted(capacidades(request.user))},
         'produtores':ProdutorSerializer(Produtor.objects.prefetch_related('fazendas__talhoes'),many=True).data,
         'fazendas':FazendaSerializer(Fazenda.objects.select_related('produtor').prefetch_related('talhoes'),many=True).data,
         'talhoes':TalhaoSerializer(Talhao.objects.select_related('fazenda'),many=True).data,
@@ -138,6 +143,7 @@ def estado(request):
 @equipe
 @require_POST
 @transaction.atomic
+@permite('analise')
 def revisar(request,pk):
     dados=body(request)
     if dados is None:return JsonResponse({'detalhe':'JSON inválido.'},status=400)
@@ -150,6 +156,14 @@ def revisar(request,pk):
         return JsonResponse({'detalhe':'A revisão humana é destinada a talhões em REVISÃO ou BLOQUEADO.'},status=409)
     if status==StatusRisco.APROVADO and not talhao.poligono:
         return JsonResponse({'detalhe':'Cadastre um polígono antes de aprovar a origem.'},status=409)
+    if status==StatusRisco.APROVADO:
+        from .models import CenarioSimulado,UploadSimulado
+        from .ambiental import canonical
+        run=CenarioSimulado.objects.filter(talhao=talhao).first()
+        if run and run.cenario in ['proximidade','nuvens']:
+            digest=hashlib.sha256(canonical(talhao.poligono)).hexdigest()
+            if not UploadSimulado.objects.filter(cenario=run,status='VALIDADO',poligono_sha256=digest).exists():
+                return JsonResponse({'detalhe':'Neste cenário, conclua um voo virtual válido antes da revisão de aprovação.'},status=409)
     revisao=RevisaoStatus.objects.create(talhao=talhao,autor=request.user,
        status_anterior=talhao.status,status_novo=status,justificativa=justificativa,
        evidencia_original={'status':talhao.status,'atributos':talhao.atributos,'poligono':talhao.poligono})
@@ -163,6 +177,7 @@ def revisar(request,pk):
 @equipe
 @require_POST
 @transaction.atomic
+@permite('balanca')
 def decidir(request,pk):
     dados=body(request)
     if dados is None:return JsonResponse({'detalhe':'JSON inválido.'},status=400)
@@ -180,6 +195,11 @@ def decidir(request,pk):
         origins=Talhao.objects.select_for_update().filter(entregas__lote=lote).order_by('pk')
         if any(status_efetivo(t)!='APROVADO' for t in origins):
             return JsonResponse({'detalhe':'Uma origem mudou de risco, está vencida ou possui geometria inválida. Reavalie os talhões antes de aceitar.'},status=409)
+        from .models import CenarioSimulado
+        ids=list(lote.itens.values_list('talhao_id',flat=True))
+        simulated=CenarioSimulado.objects.filter(talhao_id__in=ids).count()
+        if simulated not in (0,len(ids)):
+            return JsonResponse({'detalhe':'Origens simuladas e operacionais não podem compor o mesmo lote.'},status=409)
     if DecisaoRecebimento.objects.filter(lote=lote).exists():
         return JsonResponse({'detalhe':'A decisão deste lote já foi registrada e preservada para auditoria.'},status=409)
     decisao=DecisaoRecebimento.objects.create(lote=lote,operador=request.user,acao=acao,
@@ -192,6 +212,7 @@ def decidir(request,pk):
 @equipe
 @require_POST
 @transaction.atomic
+@permite('analise')
 def solicitar_vistoria(request,pk):
     dados=body(request)
     if dados is None:return JsonResponse({'detalhe':'JSON inválido.'},status=400)
@@ -213,6 +234,7 @@ def solicitar_vistoria(request,pk):
 @equipe
 @require_POST
 @transaction.atomic
+@permite('campo')
 def atualizar_vistoria(request,pk):
     dados=body(request)
     vistoria=get_object_or_404(Vistoria.objects.select_for_update(),pk=pk)
@@ -226,6 +248,7 @@ def atualizar_vistoria(request,pk):
 @equipe
 @require_POST
 @transaction.atomic
+@permite('campo')
 def enviar_arquivo(request,pk):
     vistoria=get_object_or_404(Vistoria.objects.select_for_update(),pk=pk)
     arquivo=request.FILES.get('arquivo')
@@ -259,6 +282,7 @@ def baixar_arquivo(request,pk):
 
 @equipe
 @require_GET
+@permite('exportar')
 def exportar(request,tipo,pk):
     if tipo=='talhao':
         obj=get_object_or_404(Talhao,pk=pk)
@@ -273,9 +297,28 @@ def exportar(request,tipo,pk):
     buffer=io.BytesIO()
     with zipfile.ZipFile(buffer,'w',zipfile.ZIP_DEFLATED) as archive:
         archive.writestr('registro.json',raw)
+        from .models import CenarioSimulado
+        plots=[obj] if tipo=='talhao' else list(obj.talhoes.all())
+        files={}
+        for plot in plots:
+            files[f'geometrias/talhao-{plot.pk}.geojson']=plot.poligono
+            for a in plot.analises.order_by('id')[:100]:
+                files[f'analises/{a.pk}.json']={'poligono_sha256':a.poligono_sha256,'resultado':a.resultado,
+                    'datasets':a.datasets,'criado_em':a.criado_em,'valido_ate':a.valido_ate}
+            files[f'auditoria/talhao-{plot.pk}.json']=list(EventoAuditoria.objects.filter(recurso='talhao',recurso_id=plot.pk).values(
+                'id','acao','ator_id','descricao','dados','criado_em')[:500])
+            run=CenarioSimulado.objects.filter(talhao=plot).first()
+            if run:
+                for upload in run.uploads.all():files[f'vistorias-simuladas/{upload.pk}.json']=upload.validacao or {
+                    'simulado':True,'estado':upload.status,'partes_recebidas':len(upload.partes),'bytes_reais_transferidos':0}
+        hashes={'registro.json':hashlib.sha256(raw).hexdigest()}
+        for name,value in files.items():
+            content=json.dumps(value,cls=DjangoJSONEncoder,ensure_ascii=False,sort_keys=True,indent=2).encode()
+            archive.writestr(name,content);hashes[name]=hashlib.sha256(content).hexdigest()
         archive.writestr('manifesto.json',json.dumps({'sha256':hashlib.sha256(raw).hexdigest(),
+            'arquivos':hashes,'simulado':any(CenarioSimulado.objects.filter(talhao=plot).exists() for plot in plots),
             'recurso':tipo,'id':pk,'gerado_em':timezone.now().isoformat(),
-            'escopo':'Registro operacional disponível nesta implantação; não é certificação jurídica nem pacote da arquitetura S3 completa.'},ensure_ascii=False,indent=2))
+            'escopo':'Dossiê acadêmico: registro, geometrias, análises, auditoria e metadados de voos virtuais disponíveis. Não é certificação jurídica, não inclui todos os arquivos de imagem nem garante cinco anos de retenção.'},ensure_ascii=False,indent=2))
     evento(request,'EXPORTAR_REGISTRO',tipo,pk,f'{obj.codigo}: registro exportado')
     buffer.seek(0)
     return FileResponse(buffer,as_attachment=True,filename=f'raizes-{tipo}-{pk}.zip')

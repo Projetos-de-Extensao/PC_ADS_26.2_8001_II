@@ -12,7 +12,8 @@ $DOCKER compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" 
 echo "Backup gerado: src/$ARQUIVO ($(du -h "$ARQUIVO" | cut -f1))"
 # Envia para o bucket privado quando configurado, usando a função IAM da EC2.
 BUCKET=$(sed -n 's/^RAIZES_S3_BUCKET=//p' .env | tail -1 | tr -d '\r')
-if [ -n "$BUCKET" ]; then
+ENVIAR_S3=$(sed -n 's/^RAIZES_BACKUP_S3_ENABLED=//p' .env | tail -1 | tr -d '\r')
+if [ "$ENVIAR_S3" = "1" ] && [ -n "$BUCKET" ]; then
   aws s3 cp "$ARQUIVO" "s3://$BUCKET/backups/postgres/$(basename "$ARQUIVO")" --sse AES256 --only-show-errors
   echo "Backup PostgreSQL enviado ao S3 privado."
   MEDIA="backups/media_$(date +%F_%H%M).tar.gz"

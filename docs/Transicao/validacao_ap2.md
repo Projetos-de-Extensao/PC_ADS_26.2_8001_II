@@ -79,4 +79,4 @@ registra os limites e as verificações da implantação autorizada.
 
 ## Revisão atual de 12/11/2026
 
-O console confirmou o SG somente com portas 22/8000, PostgreSQL sem exposição, professor com acesso admin ao repositório e os três integrantes com commits associados aos seus logins. Foram acrescentadas constraints e máscaras, com 80 testes no PostgreSQL local. Aprovações e apresentação continuam dependendo da equipe. Veja a auditoria atual para os detalhes e evidências.
+O console confirmou o SG somente com portas 22/8000, PostgreSQL sem exposição, professor com acesso admin ao repositório e os três integrantes com commits associados aos seus logins. Foram acrescentadas constraints e máscaras, com 80 testes no PostgreSQL local e na EC2. O teste down/up foi repetido com preservação de IDs/FKs. Aprovações e apresentação continuam dependendo da equipe. Veja a auditoria atual para os detalhes e evidências.

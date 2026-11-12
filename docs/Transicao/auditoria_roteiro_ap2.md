@@ -15,7 +15,7 @@ aprovação do professor ou participação em apresentação.
 | A5 | Atendido nos cinco recursos de cadastro: CRUD, aninhamento e filtro JSON | `CrudCompletoTests`, script `validar_api_publica.py`; registros de auditoria são preservados, sem CRUD destrutivo |
 | A6 | Atendido: Admin com superusuário existente e estáticos | `AdminSeedTests` e evidência de login/Admin |
 | A7 | Atendido: ambiente para banco, SECRET_KEY, DEBUG e hosts | Configuração inspecionada sem revelar segredos; DEBUG=False |
-| A8 | Atendido: seed idempotente e 80 testes | Suíte PostgreSQL; [log local](../assets/evidencias/23-integridade-testes-windows.log) |
+| A8 | Atendido: seed idempotente e 80 testes | 80 testes aprovados no Windows/PostgreSQL 18 e na EC2/PostgreSQL 16; [local](../assets/evidencias/23-integridade-testes-windows.log), [EC2](../assets/evidencias/25-integridade-testes-ec2.log) |
 
 As [constraints e máscaras](../Construcao/integridade_validacoes.md) são um reforço de
 integridade do projeto. O roteiro oficial lista A1–A8; ele não determina um campo
@@ -31,7 +31,7 @@ obrigatório `char(11)` nem enumera uma lista própria de CHECKs de CPF.
 | B4 | Atendido: `.env` ignorado; `.env.example` rastreado; sem envio do `.env` | `git ls-files`, `.gitignore`, `.dockerignore`; permissão do arquivo privado |
 | B5 | Atendido pelo fluxo Windows → push → pull EC2 → build → bootstrap | Histórico Git, workflow, logs de atualização; `migrate` e `collectstatic` no bootstrap |
 | B6 | Atendido: API e Admin pelo IP público | [API](http://18.117.197.72:8000/api/), [Admin](http://18.117.197.72:8000/admin/) |
-| B7 | Evidência de down/up sem remover volume já registrada; atualização atual preserva IDs e vínculos | [Persistência](../assets/evidencias/06-persistencia.png), contagens antes/depois |
+| B7 | Down/up repetido em 12/11 sem remover volume; todos os IDs e vínculos preservados | [Log atual down/up](../assets/evidencias/27-integridade-persistencia.log), [backup versus banco atual](../assets/evidencias/26-integridade-preservacao.log) |
 | B8 | README possui imagens de containers, logs, API, SQL e persistência, identificadas pela origem | [Validação e evidências](validacao_ap2.md); logs atuais complementam capturas históricas |
 
 Console em 12/11: instância `AP2` / `i-0c52ff121375a0404`, t3.small, executando com
@@ -64,6 +64,8 @@ e capturas são identificadas como históricas, sem substituir a revisão atual.
 
 ## Repositório e apresentação
 
+Não foi encontrado slide de destaques versionado no repositório. A equipe precisa preparar esse slide e apresentar os aspectos da entrega; esta auditoria não é a apresentação.
+
 Consulta específica da API GitHub confirmou **`jonh-carvalho` com permissão admin**.
 Os três integrantes constam como colaboradores (`jmeirelles02`, `Joaovdonda`, `Rechuanz`)
 e os três logins aparecem associados a commits existentes. Não foram fabricados autores
@@ -86,3 +88,33 @@ registrada. Uma validação automatizada não autoriza marcar a aprovação do p
 
 O laboratório acadêmico exercita drones e fontes sintéticas. Isso não significa que
 Cognito, RDS/PostGIS, Athena, Lambda ou arquivos reais de 5 GB estejam implantados.
+
+## Validação final da atualização
+
+- Commit de implementação: `46698d5`. Migrations `0005`/`0006` aplicadas pelo bootstrap,
+  53 CHECKs novos e **58 CHECKs no total** nas tabelas do app; limite do documento: 14.
+- 80 testes aprovados na EC2 em 11,230 s; `migrate --check` e `makemigrations --check`
+  sem pendências. Workflows de aplicação e documentação aprovados.
+- Backup local restaurado em banco temporário separado. IDs/FKs originais conferidos;
+  banco temporário removido sem restaurar por cima do banco principal.
+- Down/up real em 12/11: 5 produtores, 7 fazendas, 17 talhões, 3 lotes e 2 itens,
+  com igualdade dos IDs/FKs antes e depois. Banco healthy; web/worker ativos.
+- [HTTP público](../assets/evidencias/28-api-publica-atual.log): POST/PUT/PATCH/GET,
+  aninhamento/filtro JSON, recebimento 201 e duas violações com rollback 409.
+  Durante a verificação, o worker produziu análise para o talhão fictício de teste;
+  por isso a exclusão do talhão e de seus pais retornou 409. Os três cadastros foram
+  preservados, em vez de apagar a análise/auditoria para forçar a limpeza. Itens/lotes
+  de teste sem histórico protegido foram removidos. O script agora identifica 409
+  de preservação separadamente de uma falha inesperada.
+- Navegador público: CPF `12345678909` exibido `123.456.789-09`; CNPJ numérico
+  pontuado; `11111111111` rejeitado antes do envio. Formulário cancelado sem salvar.
+- [Amostra de latência pública](../assets/evidencias/29-latencia-publica-atual.log):
+  p50 381,2 ms e p95 1.714,2 ms em 20 GETs sequenciais. O p95 desta amostra excede
+  a meta de 500 ms do produto; carga sustentada e essa meta **não estão comprovadas**.
+  A primeira medição do script incluía autenticação Basic em todo GET, acrescentando
+  trabalho de autenticação; o script passou a usar GET público para essa amostra.
+
+A execução manual redundante de `migrate` coincidiu com o bootstrap e encontrou uma
+constraint já criada. A execução do bootstrap concluiu as duas migrations; a conferência
+posterior verificou todas marcadas como aplicadas, 80 testes e API operante. Não houve
+uso de `--fake`, exclusão de constraint ou perda de vínculos para contornar o erro.

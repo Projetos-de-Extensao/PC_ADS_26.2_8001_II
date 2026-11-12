@@ -210,7 +210,7 @@ O passo a passo manual está em
 | Transação | Recebimento 201; peso divergente e talhão repetido retornam 409, sem gravação parcial |
 | Admin | Login real com CSRF e listagem de talhões verificados; estáticos acessíveis |
 | Persistência | Mesmo registro, ID e conteúdo após `docker compose down` e `up -d` |
-| Testes | 80 testes da atualização, incluindo integridade e migrations; ver auditoria de 12/11/2026 |
+| Testes | 80 testes aprovados no Windows/PostgreSQL 18 e na EC2/PostgreSQL 16; integridade e migrations incluídas |
 | Restore | Banco separado restaurado; contagens das cinco tabelas e índice GIN iguais ao original |
 | Backup | Dump local e envio S3 por função IAM quando configurado; ver guia de integrações |
 | Security Group | Console conferido em 12/11: `launch-wizard-2` somente TCP 22 e 8000; SSH ainda aceita qualquer origem IPv4 |

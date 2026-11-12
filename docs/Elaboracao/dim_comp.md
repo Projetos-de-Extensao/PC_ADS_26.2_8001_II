@@ -59,6 +59,8 @@ As antigas referências de 49 ms e plano GIN não possuíam artefato reproduzív
 
 Amostra atual de 12/11/2026, sem carga sustentada: web **174,2 MiB**, db **61,19 MiB**, integracoes **88,96 MiB**; disco livre **2,1 GiB**. A medição anterior acima é mantida como histórico.
 
+Amostra externa atual de 12/11/2026, sem Basic em cada GET: 20 consultas públicas sequenciais, p50 **381,2 ms** e p95 **1.714,2 ms**, com 17 talhões. O p95 observado excede a meta de 500 ms; não se afirma que RNF-PER-01 esteja cumprido. Veja o [log atual](../assets/evidencias/29-latencia-publica-atual.log).
+
 ## 5. Memória de cálculo
 
 | Componente | Memória estimada | Base |

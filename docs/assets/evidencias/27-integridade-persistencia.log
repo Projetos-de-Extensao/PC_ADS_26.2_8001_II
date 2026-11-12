@@ -1,0 +1,43 @@
+REINICIO_SEM_REMOVER_VOLUMES
+ Container src-integracoes-1 Stopping
+ Container src-integracoes-1 Stopped
+ Container src-integracoes-1 Removing
+ Container src-integracoes-1 Removed
+ Container src-web-1 Stopping
+ Container src-web-1 Stopped
+ Container src-web-1 Removing
+ Container src-web-1 Removed
+ Container src-db-1 Stopping
+ Container src-db-1 Stopped
+ Container src-db-1 Removing
+ Container src-db-1 Removed
+ Network src_default Removing
+ Network src_default Removed
+ Network src_default Creating
+ Network src_default Creating
+ Network src_default Created
+ Network src_default Created
+ Container src-db-1 Creating
+ Container src-db-1 Created
+ Container src-web-1 Creating
+ Container src-web-1 Created
+ Container src-integracoes-1 Creating
+ Container src-integracoes-1 Created
+ Container src-db-1 Starting
+ Container src-db-1 Started
+ Container src-db-1 Waiting
+ Container src-db-1 Healthy
+ Container src-web-1 Starting
+ Container src-web-1 Started
+ Container src-integracoes-1 Starting
+ Container src-integracoes-1 Started
+curl: (56) Recv failure: Connection reset by peer
+curl: (56) Recv failure: Connection reset by peer
+ src-web-1 Copying /tmp/raizes-persistencia-constraints.json to src-web-1:/tmp/raizes-persistencia-constraints.json
+ src-web-1 Copied /tmp/raizes-persistencia-constraints.json to src-web-1:/tmp/raizes-persistencia-constraints.json
+PERSISTENCIA_DOWN_UP_COMPROVADA {'Produtor': 5, 'Fazenda': 7, 'Talhao': 17, 'Lote': 3, 'LoteTalhao': 2}
+LOGIN_HTTP_200_E_MIGRATIONS_OK
+NAME                IMAGE              COMMAND                  SERVICE       CREATED          STATUS                    PORTS
+src-db-1            postgres:16        "docker-entrypoint.s…"   db            17 seconds ago   Up 16 seconds (healthy)   5432/tcp
+src-integracoes-1   raizes-web:local   "sh -c 'until python…"   integracoes   17 seconds ago   Up 9 seconds
+src-web-1           raizes-web:local   "sh -c 'python manag…"   web           17 seconds ago   Up 10 seconds             0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp

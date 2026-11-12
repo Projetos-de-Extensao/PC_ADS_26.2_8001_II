@@ -22,16 +22,19 @@ created = []
 
 def request(method, path, data=None, expected=200):
     body = json.dumps(data).encode() if data is not None else None
+    headers={'Content-Type':'application/json','Accept':'application/json'}
+    if method != 'GET':
+        headers['Authorization']='Basic '+auth
     req = urllib.request.Request(BASE + path, data=body, method=method,
-                                 headers={'Content-Type': 'application/json','Accept':'application/json',
-                                          'Authorization':'Basic '+auth})
+                                 headers=headers)
     try:
         response = urllib.request.urlopen(req, timeout=20)
     except urllib.error.HTTPError as error:
         response = error
     raw = response.read().decode()
     result = json.loads(raw) if raw else None
-    assert response.status == expected, (method, path, response.status, result)
+    allowed=expected if isinstance(expected,tuple) else (expected,)
+    assert response.status in allowed, (method, path, response.status, result)
     report.append(f'{method} {path} -> {response.status}')
     return result
 
@@ -98,7 +101,9 @@ try:
 finally:
     for path in reversed(created):
         try:
-            request('DELETE',path,expected=204)
+            result=request('DELETE',path,expected=(204,409))
+            if result:
+                report.append(f'PRESERVADO {path}: possui histórico/vínculos protegidos; não apagar a auditoria para limpar o teste.')
         except Exception as exc:
             report.append(f'ERRO DE LIMPEZA {path}: {exc}')
     output=Path.cwd()/'public-api-validation.log'

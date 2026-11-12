@@ -49,7 +49,7 @@ Ele não é apresentado como CPF de uma pessoa.
 
 A migration `0006` acrescenta **53 CHECKs explícitos**, além das PKs, FKs, `UNIQUE`,
 `NOT NULL`, limites dos tipos e verificações de campos inteiros positivos já existentes.
-O índice GIN de `Talhao.atributos` continua preservado.
+O catálogo da EC2 apresenta 58 CHECKs ao todo, incluindo os anteriores. O índice GIN de `Talhao.atributos` continua preservado. Os limites de texto também são refletidos em `maxlength` nos formulários.
 
 Regras que consultam várias linhas — soma dos pesos, pior risco das origens, mistura
 de laboratório/operação e validade de análises — permanecem nas transações da aplicação,

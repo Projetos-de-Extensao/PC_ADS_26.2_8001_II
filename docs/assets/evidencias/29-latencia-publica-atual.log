@@ -1,0 +1,1 @@
+GET público sem Basic, 20 consultas sequenciais: p50=381.2 ms; p95=1714.2 ms; talhoes=17. Não é teste sustentado de carga.
